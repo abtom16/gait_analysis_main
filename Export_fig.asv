@@ -1,0 +1,1391 @@
+function[] = Export_fig(Modified_input_file,paralyzed_side)
+
+%%   make folder for figure
+[path, name, ~]=fileparts(Modified_input_file);
+figure_path = fullfile(path, 'figure');
+if ~exist(figure_path, 'dir')
+    mkdir(figure_path);
+    disp("'figure' folder not found. Creating new directory");
+end
+name = char(name);  %%文字列にしないと[]がリストになってしまう
+export_filename = fullfile(figure_path, ['Figure_',name,'.pdf']);
+indiv_figdir = fullfile(figure_path,name);
+if ~exist(indiv_figdir,'dir')
+    mkdir(indiv_figdir);
+    disp(['Figure folder for "',name,'" has been created!']);
+end
+if exist(export_filename, 'file') == 2
+    % ファイルが存在する場合、削除する
+    choice = questdlg(...
+        {'指定したファイルは既に存在します。削除して新しいファイルを保存しますか？  削除せず図を追加することも可能です', '実行キャンセルは✕ボタン'}, ...
+        'ファイルの確認', ...
+        '古いファイルを削除', '既存ファイルに図を追加', '古いファイルを削除');
+
+    if isempty(choice)
+        % ユーザーが✕ボタンを押した場合の処理
+        disp('処理を中止しました。');
+        return;
+    end
+    if strcmp(choice, '古いファイルを削除')
+        % ファイルを削除
+        delete(export_filename);
+        disp('古いファイルを削除して上書き保存します')
+    elseif strcmp(choice, '既存ファイルに図を追加')
+        disp('既存ファイルに図を追加します');
+    end
+end
+
+complement_title = ["R knee flexion", "L knee flexion", "R ankle flexion", "L ankle flexion", "R hip flexion", "L hip flexion", ...
+                    "R hip internal rotation", "L hip internal rotation", "R hip abduction", "L hip abduction", "lateral accel L5", "lumber lateral flex", "trunk lateral flex", "trunk forward tilt"]; 
+
+writematrix(complement_title, Modified_input_file, 'Sheet', 'Linear_complement', 'Range', 'A1');
+
+%%  Aquiring data
+sheet_11m = '時系列データ 11m';
+sheet_5m = '時系列データ 5m';
+data_all = GaitData2(input_file_name, sheet_11m);
+data_measure = GaitData2(input_file_name, sheet_5m);
+
+%% --重心軌跡-- %%
+メモ
+data_all.CoM.x
+data_all.CoM.y
+data_all.CoM.z
+data_all.RFoot.x
+data_all.RFoot.y
+data_all.LFoot.x
+data_all.LFoot.y
+data_all.RToe.x
+data_all.RToe.z
+data_all.LToe.x
+data_all.LToe.z
+data_all.RThigh.x
+data_all.RThigh.z
+data_all.LThigh.x
+data_all.LThigh.z
+
+
+start_frame = find(data_all.CoM.x > 3, 1, 'first');
+end_frame = find(data_all.CoM.x > 8, 1, 'first');
+gray_black = [0.5, 0.5, 0.5];
+
+%　歩容特性　標準偏差等グラフ化　%
+df3 = readmatrix(Modified_input_file, 'Sheet', '歩容特性', 'Range', 'A11');
+
+num_rows = size(df3, 1);
+valid_data = df3(1:num_rows-2, :);
+mean_df3 = df3(num_rows-1, 2:end);
+std_df3 = df3(num_rows, 2:end);
+step_No = valid_data(:, 1);
+step_data = valid_data(:, 2:end);
+
+title_labels = {'Right Stride Length', 'Left Stride Length','Right Step Length', 'Left Step Length', 'Right Walking Cycle', 'Left Walking Cycle', 'Right Stance time', 'Left Stance time', 'Right Swing time', 'Left Swing time', 'Right Step Width', 'Left Step Width'};
+y_labels = {"Step Length [m]","Step Length [m]","Step Length [m]","Step Length [m]","time [s]","time [s]","time [s]","time [s]","time [s]","time [s]","Step Width [m]","Step Width [m]"};
+
+% nondisable_average_path = 'D:\1修士\６.Xsens_analysis\歩容特性分析_abe_健常者分析用\健常者歩容特性平均.xlsx';
+nondisable_average_path = 'C:\abe_backup\backup\1修士\６.Xsens_analysis\歩容特性分析_abe_健常者分析用\健常者歩容特性平均.xlsx';
+
+nondisable_data = readmatrix(nondisable_average_path, 'Sheet', 'Sheet2', 'Range', 'B16:M17');
+nondisable_ave = nondisable_data(1,:);
+nondisable_std = nondisable_data(2,:);
+
+for i=1:12
+current_data = step_data(:, i);
+current_mean = mean_df3(i);
+current_std = std_df3(i);
+valid_dataidx = ~isnan(current_data);
+num_steps = length(current_data(valid_dataidx));
+current_nondisable_ave = nondisable_ave(i);
+current_nondisable_std = nondisable_std(i);
+
+
+figure('Visible','off');
+bar_plot_data = bar(2:num_steps+1, current_data(valid_dataidx), 'FaceColor', [0.9,0.9,0.9]); hold on;
+bar_plot_ave = bar(1, current_mean, 'FaceColor', [1,0,0]); hold on;
+bar_nondisable_ave = bar(num_steps+2, current_nondisable_ave, 'FaceColor', [0.2,0.5,0.8]); hold on;
+errorbar(1, current_mean, current_std, 'k', 'LineWidth', 1); hold on;
+errorbar(num_steps+2, current_nondisable_ave, current_nondisable_std ,'k', 'LineWidth', 1);
+
+x_line = (2 * num_steps + 3) / 2; 
+
+if i == 5 || i == 6
+    ylim([0, 1.4]);
+elseif i == 7 || i == 8
+    ylim([0, 1.0]);
+elseif i == 9 || i == 10
+    ylim([0, 0.6]);
+end
+
+y_limits = ylim;
+% 縦線をプロット
+plot([x_line, x_line], y_limits, 'k-', 'LineWidth', 1.5);
+
+title(title_labels{i});
+x_labels = ["Average", strcat("Step", string(1:num_steps)), "Control Average"];
+xticks(1:num_steps+2);
+xticklabels(x_labels);
+xlabel("Step Number");
+ylabel(y_labels{i});
+
+exportgraphics(gcf, export_filename, 'Append', true);
+saveas(gcf,fullfile(indiv_figdir, [title_labels{i},'.jpeg']));
+close(gcf);
+
+end
+
+compare_title_labels = {'Compare double support Step Length','Compare Step Length', 'Compare Walking Cycle', 'Compare Stance time','Compare Swing time', 'Compare Step Width'};
+compare_y_labels = {"Step Length [m]","Step Length [m]","time [s]","time [s]","time [s]","Step Width [m]"};
+for i=1:6
+    % 右足と左足のデータを取得
+    num_steps = length(step_No);
+    current_data_right = step_data(:, 2*i-1);
+    current_data_left = step_data(:, 2*i);
+    current_data_left(isnan(current_data_left)) = 0;
+    current_data_right(isnan(current_data_right)) = 0;
+    if current_data_right(end)==0 && current_data_left(end)==0
+        num_steps_forbar = num_steps-1;
+        current_data_left = current_data_left(1:end-1);
+        current_data_right = current_data_right(1:end-1);
+    else
+        num_steps_forbar = num_steps;
+    end
+    
+    current_mean_right = mean_df3(2*i-1);
+    current_mean_left = mean_df3(2*i);
+    current_std_right = std_df3(2*i-1);
+    current_std_left = std_df3(2*i);
+    % Control (健常者平均)
+    current_nondisable_ave_right = nondisable_ave(2*i-1);
+    current_nondisable_ave_left = nondisable_ave(2*i);
+    current_nondisable_std_right = nondisable_std(2*i-1);
+    current_nondisable_std_left = nondisable_std(2*i);
+
+    % 図の作成
+    figure('Visible','off');
+
+    % バーのX位置を調整
+    x_positions = 1:num_steps_forbar+2; % 各ステップのx位置
+    x_positions_left = x_positions - 0.15; % 左足用
+    x_positions_right = x_positions + 0.15; % 右足用
+
+    % 各ステップのバーを作成（左右のデータを並べる）
+    bar(x_positions_left(2:end-1), current_data_left, 0.3,'grouped', 'FaceColor', [0.9,0.9,0.9], 'DisplayName', 'Left Step'); hold on;
+    bar(x_positions_right(2:end-1), current_data_right, 0.3, 'grouped', 'FaceColor', [0.9,0.9,0.9], 'DisplayName', 'Right Step'); hold on;
+
+    % 平均値のバー
+    bar(x_positions_left(1), current_mean_left, 0.3, 'FaceColor', [1,0,0], 'DisplayName','Left Average'); hold on;
+    bar(x_positions_right(1), current_mean_right, 0.3, 'FaceColor', [0.8,0,0], 'DisplayName','Right Average'); hold on;
+
+    % 健常者群の平均
+    bar(x_positions_left(end), current_nondisable_ave_left, 0.3, 'FaceColor', [0.2,0.5,0.8], 'DisplayName', 'Control Left Average'); hold on;
+    bar(x_positions_right(end), current_nondisable_ave_right, 0.3, 'FaceColor', [0.1,0.4,0.7], 'DisplayName', 'Control Right Average'); hold on;
+
+    % エラーバーを追加
+    errorbar(x_positions_left(1), current_mean_left, current_std_left, 'k', 'LineWidth', 1, 'HandleVisibility','off');
+    errorbar(x_positions_right(1), current_mean_right, current_std_right, 'k', 'LineWidth', 1, 'HandleVisibility','off');
+    errorbar(x_positions_left(end), current_nondisable_ave_left, current_nondisable_std_left, 'k', 'LineWidth', 1, 'HandleVisibility','off');
+    errorbar(x_positions_right(end), current_nondisable_ave_right, current_nondisable_std_right, 'k', 'LineWidth', 1, 'HandleVisibility','off');
+
+    % y軸の範囲を調整
+    if i == 3
+        ylim([0, 1.4]);
+    elseif i == 4
+        ylim([0, 1.0]);
+    elseif i == 5
+        ylim([0, 0.6]);
+    end
+
+    x_line = (x_positions_right(end) + x_positions_left(end-1)) / 2; % ちょうど間
+    y_limits = ylim;
+    plot([x_line, x_line], [y_limits(1), y_limits(2)], 'k-', 'LineWidth', 1.5, 'HandleVisibility','off');
+
+    legend('Location','best');
+
+    % 軸ラベルの設定
+    title(compare_title_labels{i});
+    x_labels = ["Average", strcat("Step", string(1:num_steps)), "Control Average"];
+    xticks(x_positions);
+    xticklabels(x_labels);
+    xlabel("Step Number");
+    ylabel(compare_y_labels{i});
+
+    % 保存
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf,fullfile(indiv_figdir, [compare_title_labels{i},'.jpeg']));
+    close(gcf);
+end
+
+% 水平面-重心軌跡 %
+figure('Visible', 'off');
+ax = axes;
+set(ax, 'Position', [0.3, 0.05, 0.4, 0.9]);
+bg1 = fill([-0.5,0.5,0.5,-0.5],[0,0,3,3],[0.9,0.9,0.9],'EdgeColor', 'none','FaceAlpha', 0.5,'HandleVisibility','off');hold on;
+bg_main = fill([-0.5,0.5,0.5,-0.5],[3,3,8,8], [0,0,1], 'EdgeColor', 'none','FaceAlpha', 0.1,'HandleVisibility','off');hold on;
+bg2 = fill([-0.5,0.5,0.5,-0.5],[8,8,11,11],[0.9,0.9,0.9],'EdgeColor', 'none','FaceAlpha', 0.5,'HandleVisibility','off');
+uistack(bg1, 'bottom');
+uistack(bg_main, 'bottom');
+uistack(bg2, 'bottom');
+
+plot(CoM_y(1:start_frame), CoM_x(1:start_frame), '--','Color', gray_black, 'LineWidth',1.2,'HandleVisibility','off');hold on;
+plot(CoM_y(start_frame:end_frame), CoM_x(start_frame:end_frame), '-k', 'LineWidth',2,'DisplayName','CoM');hold on;
+plot(CoM_y(end_frame:end), CoM_x(end_frame:end), '--','Color', gray_black, 'LineWidth',1.2,'HandleVisibility','off');hold on;
+p1 = plot(Rfoot_y(1:start_frame), Rfoot_x(1:start_frame), '-b','LineWidth',1,'HandleVisibility','off');hold on;
+plot(Rfoot_y(start_frame:end_frame), Rfoot_x(start_frame:end_frame), '-b', 'LineWidth',1.2,'DisplayName','Right Foot');hold on;
+p2 = plot(Rfoot_y(end_frame:end), Rfoot_x(end_frame:end), '-b', 'LineWidth',1,'HandleVisibility','off');hold on;
+p3 = plot(Lfoot_y(1:start_frame), Lfoot_x(1:start_frame), '-g','LineWidth',1,'HandleVisibility','off');hold on;
+plot(Lfoot_y(start_frame:end_frame), Lfoot_x(start_frame:end_frame), '-g', 'LineWidth',1.2,'DisplayName','Left Foot');hold on;
+p4 = plot(Lfoot_y(end_frame:end), Lfoot_x(end_frame:end), '-g', 'LineWidth',1,'HandleVisibility','off');
+
+p1.Color = [0,0,1,0.2];
+p2.Color = [0,0,1,0.2];
+p3.Color = [0,1,0,0.2];
+p4.Color = [0,1,0,0.2];
+
+legend('Location','Best');
+xlim([-0.5,0.5]);
+ylim([0,11]);
+xlabel('Center of Mass (Lateral) [m]');
+ylabel('Center of Mass (AP) [m]');
+title('Trajectory of Center of Mass on the Horizontal Plane');
+
+yline(3, '--b', '5m measurement starting point','HandleVisibility','off');
+yline(8, '--b', '5m measurement endpoint','HandleVisibility','off');
+exportgraphics(gcf, export_filename, 'Append', true);
+saveas(gcf,fullfile(indiv_figdir, '重心軌跡水平面.jpeg'))
+close(gcf);
+
+
+
+% 矢状面-重心軌跡 %
+figure('Visible', 'off');
+bg1 = fill([0,3,3,0],[0,0,1,1],[0.9,0.9,0.9],'EdgeColor', 'none','FaceAlpha',0.5,'HandleVisibility','off');hold on;
+bg_main = fill([3,8,8,3],[0,0,1,1],[0,0,1],'EdgeColor', 'none','FaceAlpha',0.1,'HandleVisibility','off');hold on;
+bg2 = fill([8,11,11,8],[0,0,1,1],[0.9,0.9,0.9],'EdgeColor', 'none','FaceAlpha',0.5,'HandleVisibility','off');
+uistack(bg1, 'bottom');
+uistack(bg_main, 'bottom');
+uistack(bg2, 'bottom');
+
+plot(data_all.CoM.(1:start_frame), CoM_z(1:start_frame), '--','Color', gray_black, 'LineWidth',1.2, 'HandleVisibility','off');hold on;
+plot(CoM_x(start_frame:end_frame), CoM_z(start_frame:end_frame), '-k', 'LineWidth',2, 'Marker', 'x', 'MarkerIndices',1:60:end_frame-start_frame,'MarkerSize', 8,'DisplayName','CoM');hold on;
+plot(CoM_x(end_frame:end), CoM_z(end_frame:end), '--','Color', gray_black, 'LineWidth',1.2,'HandleVisibility','off');hold on;
+p5 = plot(RToe_x(1:start_frame), RToe_z(1:start_frame), '-','Color', gray_black, 'LineWidth',1.2,'HandleVisibility','off');hold on;
+plot(RToe_x(start_frame:end_frame), RToe_z(start_frame:end_frame), '-b', 'LineWidth',1.2,'Marker', 'x', 'MarkerIndices',1:60:end_frame-start_frame,'MarkerSize', 8,'DisplayName','Right Toe');hold on;
+p6 = plot(RToe_x(end_frame:end), RToe_z(end_frame:end), '-','Color', gray_black, 'LineWidth',1.2,'HandleVisibility','off');hold on;
+p7 = plot(LToe_x(1:start_frame), LToe_z(1:start_frame), '-','Color', gray_black, 'LineWidth',1.2,'HandleVisibility','off');hold on;
+plot(LToe_x(start_frame:end_frame), LToe_z(start_frame:end_frame), '-g', 'LineWidth',1.2,'Marker', 'x', 'MarkerIndices',1:60:end_frame-start_frame,'MarkerSize', 8,'DisplayName','Left Toe');hold on;
+p8 = plot(LToe_x(end_frame:end), LToe_z(end_frame:end), '-','Color', gray_black, 'LineWidth',1.2,'HandleVisibility','off');
+
+
+p5.Color = [0,0,1,0.4];
+p6.Color = [0,0,1,0.4];
+p7.Color = [0,1,0,0.4];
+p8.Color = [0,1,0,0.4];
+
+
+legend('Location','Best');
+xlim([0,11]);
+ylim([0,1]);
+xlabel('Center of Mass (AP) [m]');
+ylabel('Center of Mass (Vertical) [m]');
+title('Trajectory of Center of Mass on the Sagittal Plane');
+
+xline(3, '--b', '5m measurement starting point','HandleVisibility','off');
+xline(8, '--b', '5m measurement endpoint','HandleVisibility','off');
+set(gcf, 'Position', [100, 100, 900, 300]);
+exportgraphics(gcf, export_filename, 'Append', true);
+saveas(gcf,fullfile(indiv_figdir, '重心軌跡矢状面.jpeg'))
+close(gcf);
+
+
+%% --関節角度計算-- %%
+df2 = readmatrix(Modified_input_file, 'Sheet','時系列データ 5m');
+Rfootcontact = df2(2:end,11);
+Lfootcontact = df2(2:end,12);
+Rcontact_frame = find([0;diff(Rfootcontact)==1;0]);
+Rcontact_end_frame = find([0; diff(Rfootcontact) == -1; 0]);
+if Rcontact_end_frame(1) < Rcontact_frame(1)
+    Rcontact_end_frame = Rcontact_end_frame(2:end);
+end
+if Rcontact_end_frame(end) < Rcontact_frame(end)
+    Rcontact_frame = Rcontact_frame(1:end-1);
+end
+
+Lcontact_frame = find([0;diff(Lfootcontact)==1;0]);
+Lcontact_end_frame = find([0; diff(Lfootcontact) == -1; 0]);
+if Lcontact_end_frame(1) < Lcontact_frame(1)
+    Lcontact_end_frame = Lcontact_end_frame(2:end);
+end
+if Lcontact_end_frame(end) < Lcontact_frame(end)
+    Lcontact_frame = Lcontact_frame(1:end-1);
+end
+
+% すり足対策として、連続する1の数をカウントし、20回未満の接地を除外
+min_contact_duration = 20; % 最小連続接地フレーム数  modifyingのchange_to1_rightとかとやってること一緒です。時間がなくて二重でコード書いてしまっているので気になったら編集してください
+valid_Rcontact_frame = [];
+valid_Rcontact_end_frame = [];
+for i = 1:length(Rcontact_frame)-1
+    if (Rcontact_end_frame(i) - Rcontact_frame(i)) >= min_contact_duration
+        valid_Rcontact_frame = [valid_Rcontact_frame, Rcontact_frame(i)];
+        valid_Rcontact_end_frame = [valid_Rcontact_end_frame, Rcontact_end_frame(i)];
+    end
+end
+valid_Lcontact_frame = [];
+valid_Lcontact_end_frame = [];
+for i = 1:length(Lcontact_frame)-1
+    if (Lcontact_end_frame(i) - Lcontact_frame(i)) >= min_contact_duration
+        valid_Lcontact_frame = [valid_Lcontact_frame, Lcontact_frame(i)];
+        valid_Lcontact_end_frame = [valid_Lcontact_end_frame, Lcontact_end_frame(i)];
+    end
+end
+
+CoM_x_5m = df2(2:end,1);
+CoM_y_5m = df2(2:end,2);
+CoM_z_5m = df2(2:end,3);
+CoM_z_5m_mean = mean(CoM_z_5m);
+Rknee_angle = df2(2:end,7);
+Lknee_angle = df2(2:end,8);
+Rankle_angle = df2(2:end,9);
+Lankle_angle = df2(2:end,10);
+Rhip_abduction = df2(2:end,29); % 外転
+Lhip_abduction = df2(2:end,30);
+Rhip_rotation = df2(2:end,48);
+Lhip_rotation = df2(2:end,50);
+Rhip_extension = df2(2:end,49);
+Lhip_extension = df2(2:end,51);
+L5_ay_5 = df2(2:end,22);
+
+Rfoot_x_5 = df2(2:end,13);
+Lfoot_x_5 = df2(2:end,14);
+Rfoot_y_5 = df2(2:end,15);
+Lfoot_y_5 = df2(2:end,16);
+Rtoe_x_5 = df2(2:end,46);
+Rtoe_y_5 = df2(2:end,56);
+Rtoe_z_5 = df2(2:end,33);  %　トゥクリアランス
+Ltoe_x_5 = df2(2:end,47);
+Ltoe_y_5 = df2(2:end,57);
+Ltoe_z_5 = df2(2:end,34);
+Rthigh_x_5 = df2(2:end,36);
+Rthigh_z_5 = df2(2:end,37);
+Lthigh_x_5 = df2(2:end,41);
+Lthigh_z_5 = df2(2:end,42);
+
+neck_x = df2(2:end,58);
+neck_y = df2(2:end,59);
+Lumber_lateralFlex = df2(2:end, 53);
+Pelvis2Neck_lateralFlex = df2(2:end, 54);
+Pelvis2Neck_Flex = df2(2:end, 55);  %  体幹部の前傾度合を見たい　骨盤から首の角度（矢状面）
+
+nondisabled_data = 'C:\abe_backup\backup\1修士\６.Xsens_analysis\歩容特性分析_abe_健常者分析用\健常者データ\健常者平均および標準誤差用角度データ.xlsx';
+
+% 水平面-重心軌跡- 足部比較 %
+% 接地時の足部の座標と離地時のつま先の座標を格納
+Rfootx_footprint = [];
+Rfooty_footprint = [];
+Lfootx_footprint = [];
+Lfooty_footprint = [];
+Rtoex_footprint = [];
+Rtoey_footprint = [];
+Ltoex_footprint = [];
+Ltoey_footprint = [];
+
+for i=1:length(valid_Rcontact_frame)
+    Rfootx_footprint = [Rfootx_footprint, Rfoot_x_5(valid_Rcontact_frame(i))];
+    Rfooty_footprint = [Rfooty_footprint, Rfoot_y_5(valid_Rcontact_frame(i))];
+end
+for i=1:length(valid_Lcontact_frame)
+    Lfootx_footprint = [Lfootx_footprint, Lfoot_x_5(valid_Lcontact_frame(i))];
+    Lfooty_footprint = [Lfooty_footprint, Lfoot_y_5(valid_Lcontact_frame(i))];
+end
+for i=1:length(valid_Rcontact_frame)
+    Rtoex_footprint = [Rtoex_footprint, Rtoe_x_5(valid_Rcontact_frame(i))];
+    Rtoey_footprint = [Rtoey_footprint, Rtoe_y_5(valid_Rcontact_frame(i))];
+end
+for i=1:length(valid_Lcontact_frame)
+    Ltoex_footprint = [Ltoex_footprint, Ltoe_x_5(valid_Lcontact_frame(i))];
+    Ltoey_footprint = [Ltoey_footprint, Ltoe_y_5(valid_Lcontact_frame(i))];
+end
+
+foot_width = 0.1;
+foot_length = 0.25; %足の長さ25cm想定
+
+
+figure('Visible','off');
+ax = axes;
+set(ax, 'Position', [0.3, 0.05, 0.4, 0.9]);
+% グラフの幅と高さを計算
+
+for i=1:length(Rfootx_footprint)
+    %足部とつま先を結ぶベクトル
+    dx = Rtoex_footprint(i) - Rfootx_footprint(i);
+    dy = Rtoey_footprint(i) - Rfooty_footprint(i);
+    %ベクトルの長さ
+    length_vec = sqrt(dx^2 + dy^2);
+    %単位ベクトル
+    ex = dx / length_vec;
+    ey = dy / length_vec;
+    % 足部とつま先を結ぶ線の法線ベクトル
+    normal_vec_x = -ey;
+    normal_vec_y = ex;
+    
+    %四角形の頂点を計算
+    corner1_x = Rtoex_footprint(i) - foot_length * ex - foot_width / 2 * normal_vec_x;
+    corner1_y = Rtoey_footprint(i) - foot_length * ey - foot_width / 2 * normal_vec_y;
+    corner2_x = Rtoex_footprint(i) - foot_length * ex + foot_width / 2 * normal_vec_x;
+    corner2_y = Rtoey_footprint(i) - foot_length * ey + foot_width / 2 * normal_vec_y;
+    corner3_x = Rtoex_footprint(i) + foot_width / 2 * normal_vec_x;
+    corner3_y = Rtoey_footprint(i) + foot_width / 2 * normal_vec_y;
+    corner4_x = Rtoex_footprint(i) - foot_width / 2 * normal_vec_x;
+    corner4_y = Rtoey_footprint(i) - foot_width / 2 * normal_vec_y;
+    % 四角形を塗りつぶしてプロット
+    fill([corner1_y, corner2_y, corner3_y, corner4_y], ...
+         [corner1_x, corner2_x, corner3_x, corner4_x], ...
+         'r', 'FaceAlpha', 0.3, 'EdgeColor', 'k', 'HandleVisibility','off');
+    hold on;
+end    
+for i=1:length(Lfootx_footprint)
+    %足部とつま先を結ぶベクトル
+    dx = Ltoex_footprint(i) - Lfootx_footprint(i);
+    dy = Ltoey_footprint(i) - Lfooty_footprint(i);
+    %ベクトルの長さ
+    length_vec = sqrt(dx^2 + dy^2);
+    %単位ベクトル
+    ex = dx / length_vec;
+    ey = dy / length_vec;
+    % 足部とつま先を結ぶ線の法線ベクトル
+    normal_vec_x = -ey;
+    normal_vec_y = ex;
+    
+    %四角形の頂点を計算
+    corner1_x = Ltoex_footprint(i) - foot_length * ex - foot_width / 2 * normal_vec_x;
+    corner1_y = Ltoey_footprint(i) - foot_length * ey - foot_width / 2 * normal_vec_y;
+    corner2_x = Ltoex_footprint(i) - foot_length * ex + foot_width / 2 * normal_vec_x;
+    corner2_y = Ltoey_footprint(i) - foot_length * ey + foot_width / 2 * normal_vec_y;
+    corner3_x = Ltoex_footprint(i) + foot_width / 2 * normal_vec_x;
+    corner3_y = Ltoey_footprint(i) + foot_width / 2 * normal_vec_y;
+    corner4_x = Ltoex_footprint(i) - foot_width / 2 * normal_vec_x;
+    corner4_y = Ltoey_footprint(i) - foot_width / 2 * normal_vec_y;
+    % 四角形を塗りつぶしてプロット
+    hold on;
+    fill([corner1_y, corner2_y, corner3_y, corner4_y], ...
+         [corner1_x, corner2_x, corner3_x, corner4_x], ...
+         'r', 'FaceAlpha', 0.3, 'EdgeColor', 'k', 'HandleVisibility','off');
+end 
+
+plot(CoM_y_5m(1:end), CoM_x_5m(1:end), '-k', 'LineWidth',2,'DisplayName','CoM');hold on;
+set(gca, 'XDir', 'reverse')
+legend('Location','Best');
+xlim([-0.3,0.3]);
+ylim([3,8]);
+xlabel('Center of Mass (Lateral) [m]');
+ylabel('Center of Mass (AP) [m]');
+title('Trajectory of Center of Mass on the Horizontal Plane');
+
+yline(3, 'b', '5m measurement starting point', 'HandleVisibility','off');
+text(-0.1, 8 - 0.05, '5m measurement endpoint', 'Color', 'b', 'VerticalAlignment', 'top', 'FontSize', 9);
+
+exportgraphics(gcf, export_filename, 'Append', true);
+saveas(gcf,fullfile(indiv_figdir, '重心軌跡水平面_足部あり.jpeg'))
+close(gcf);
+
+figure('Visible','off');
+ax = axes;
+set(ax, 'Position', [0.3, 0.05, 0.4, 0.9]);
+% グラフの幅と高さを計算
+
+for i=1:length(Rfootx_footprint)
+    %足部とつま先を結ぶベクトル
+    dx = Rtoex_footprint(i) - Rfootx_footprint(i);
+    dy = Rtoey_footprint(i) - Rfooty_footprint(i);
+    %ベクトルの長さ
+    length_vec = sqrt(dx^2 + dy^2);
+    %単位ベクトル
+    ex = dx / length_vec;
+    ey = dy / length_vec;
+    % 足部とつま先を結ぶ線の法線ベクトル
+    normal_vec_x = -ey;
+    normal_vec_y = ex;
+    
+    %四角形の頂点を計算
+    corner1_x = Rtoex_footprint(i) - foot_length * ex - foot_width / 2 * normal_vec_x;
+    corner1_y = Rtoey_footprint(i) - foot_length * ey - foot_width / 2 * normal_vec_y;
+    corner2_x = Rtoex_footprint(i) - foot_length * ex + foot_width / 2 * normal_vec_x;
+    corner2_y = Rtoey_footprint(i) - foot_length * ey + foot_width / 2 * normal_vec_y;
+    corner3_x = Rtoex_footprint(i) + foot_width / 2 * normal_vec_x;
+    corner3_y = Rtoey_footprint(i) + foot_width / 2 * normal_vec_y;
+    corner4_x = Rtoex_footprint(i) - foot_width / 2 * normal_vec_x;
+    corner4_y = Rtoey_footprint(i) - foot_width / 2 * normal_vec_y;
+    % 四角形を塗りつぶしてプロット
+    fill([corner1_y, corner2_y, corner3_y, corner4_y], ...
+         [corner1_x, corner2_x, corner3_x, corner4_x], ...
+         'r', 'FaceAlpha', 0.3, 'EdgeColor', 'k', 'HandleVisibility','off');
+    hold on;
+end    
+for i=1:length(Lfootx_footprint)
+    %足部とつま先を結ぶベクトル
+    dx = Ltoex_footprint(i) - Lfootx_footprint(i);
+    dy = Ltoey_footprint(i) - Lfooty_footprint(i);
+    %ベクトルの長さ
+    length_vec = sqrt(dx^2 + dy^2);
+    %単位ベクトル
+    ex = dx / length_vec;
+    ey = dy / length_vec;
+    % 足部とつま先を結ぶ線の法線ベクトル
+    normal_vec_x = -ey;
+    normal_vec_y = ex;
+    
+    %四角形の頂点を計算
+    corner1_x = Ltoex_footprint(i) - foot_length * ex - foot_width / 2 * normal_vec_x;
+    corner1_y = Ltoey_footprint(i) - foot_length * ey - foot_width / 2 * normal_vec_y;
+    corner2_x = Ltoex_footprint(i) - foot_length * ex + foot_width / 2 * normal_vec_x;
+    corner2_y = Ltoey_footprint(i) - foot_length * ey + foot_width / 2 * normal_vec_y;
+    corner3_x = Ltoex_footprint(i) + foot_width / 2 * normal_vec_x;
+    corner3_y = Ltoey_footprint(i) + foot_width / 2 * normal_vec_y;
+    corner4_x = Ltoex_footprint(i) - foot_width / 2 * normal_vec_x;
+    corner4_y = Ltoey_footprint(i) - foot_width / 2 * normal_vec_y;
+    % 四角形を塗りつぶしてプロット
+    hold on;
+    fill([corner1_y, corner2_y, corner3_y, corner4_y], ...
+         [corner1_x, corner2_x, corner3_x, corner4_x], ...
+         'r', 'FaceAlpha', 0.3, 'EdgeColor', 'k', 'HandleVisibility','off');
+end 
+
+plot(CoM_y_5m(1:end), CoM_x_5m(1:end), '-k', 'LineWidth',2,'DisplayName','CoM');hold on;
+plot(neck_y(1:end), neck_x(1:end), '--r', 'LineWidth',2,'DisplayName','Cervital Spine' );hold on;
+plot(Ltoe_y_5(1:end), Ltoe_x_5(1:end), '--g', 'LineWidth',2,'DisplayName','Left Leg' );hold on;
+plot(Rtoe_y_5(1:end), Rtoe_x_5(1:end), '--g', 'LineWidth',2,'DisplayName','Right Leg' );hold on;
+set(gca, 'XDir', 'reverse')
+legend('Location','Best');
+xlim([-0.3,0.3]);
+ylim([3,8]);
+xlabel('CoM (Lateral) [m]');
+ylabel('CoM (AP) [m]');
+title('Trajectory of Center of Mass on the Horizontal Plane');
+
+yline(3, 'b', '5m measurement starting point','HandleVisibility','off');
+text(-0.1, 8 - 0.05, '5m measurement endpoint', 'Color', 'b', 'VerticalAlignment', 'top', 'FontSize', 9);
+
+exportgraphics(gcf, export_filename, 'Append', true);
+saveas(gcf,fullfile(indiv_figdir, '重心軌跡水平面_足部あり(頸椎足部軌道あり).jpeg'))
+close(gcf);
+next_column = 1;
+
+    function next_column = plot_joint_angle(input_file_name2, export_filename,indiv_figdir,side, angle_data, angle_label, y_lim, direction_max,direction_min,contact_frame, next_column)
+    % angle_data: 各関節の角度データ
+    % joint_name: 関節名 ('足関節' など)
+    % angle_label: 関節角度のラベル ('足関節角度(°)' など)
+    % y_lim: y軸の範囲
+    % x_labels: x軸の目盛りラベル 
+    % 図の作成
+    figure('Visible', 'off');
+    set(gcf,'defaultLegendAutoUpdate','off');
+    hold on;
+    
+    
+    bg5 = fill([0,0.6,0.6,0],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Stance Phase');hold on;
+    bg6 = fill([0.6,1,1,0.6],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],[1, 0.5, 0],'EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Swing Phase');
+    uistack(bg5, 'bottom');
+    uistack(bg6, 'bottom');
+    
+    uniform_length = 100;
+    % 線形補間とプロット
+    for j = 1:length(contact_frame)-1
+        current_cycle = angle_data(contact_frame(j):contact_frame(j+1));
+        original_x = linspace(0, 1, length(current_cycle));
+        uniform_x = linspace(0, 1, uniform_length);
+        resampled_angles(:, j) = interp1(original_x, current_cycle, uniform_x);
+        plot(uniform_x, resampled_angles(:,j), '-k', 'HandleVisibility', 'off');
+    end
+    
+    % 平均線のプロット
+    mean_resampled = mean(resampled_angles, 2);
+    plot(uniform_x, mean_resampled, '-r', 'DisplayName', 'Average', 'LineWidth', 2);
+    
+    % 凡例設定
+    legend('Location','Best');
+    
+    % 軸ラベル、目盛り設定
+    xlabel('Gait Cycle [%]');
+    xticks(0.1:0.1:1); 
+    xticklabels(arrayfun(@(v) sprintf('%.0f%%', v*100), xticks, 'UniformOutput', false));
+    ylabel([side,'　',angle_label]);
+    ylim(y_lim);
+    
+    % 方向のテキストと矢印
+    text(-0.09, max(ylim)-0.1, direction_max, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.85, 0.95]);
+    text(-0.09, min(ylim), direction_min, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.15, 0.05]);
+    
+    % 地面接触時のライン
+    l_x = line(xlim, [0 0], 'LineStyle', '-', 'Color', [0, 0, 0, 0.3], 'LineWidth', 0.7);
+    uistack(l_x, "bottom");
+    line([0 0], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.03, max(ylim), 'Initial Contact', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.1 0.1], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.13, max(ylim), 'Single Support Start', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.3 0.3], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.33, max(ylim), 'Heel Off', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.5 0.5], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.53, max(ylim), 'Double Support', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.6 0.6], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.63, max(ylim), 'Swing Phase Start', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.85 0.85], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.83, max(ylim), 'Shank Vertical', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    % グラフを保存
+    % if strcmp(angle_label, 'L5左右方向の加速度 [m/s^2]')
+    %     angle_label_export = 'L5左右方向の加速度';
+    % else
+    %     angle_label_export = angle_label;
+    % end
+
+    writematrix(mean_resampled, input_file_name2, 'Sheet', 'Linear_complement', 'Range', [char('A' + next_column - 1), '2']);
+    angle_label_export = regexprep(angle_label, '\[.*?\]', '');
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf, fullfile(indiv_figdir, [side, angle_label_export, '.jpeg']));
+    close(gcf);
+    next_column = next_column + 1;
+end
+% function Rplot_joint_angle_adjcycle(export_filename, indiv_figdir, angle_data, angle_label, y_lim, direction_max,direction_min, valid_Rcontact_frame)
+%     % angle_data: 各関節の角度データ
+%     % joint_name: 関節名 ('足関節' など)
+%     % angle_label: 関節角度のラベル ('足関節角度(°)' など)
+%     % y_lim: y軸の範囲
+%     % x_labels: x軸の目盛りラベル
+% 
+%     % 図の作成
+%     figure('Visible', 'off');
+% 
+%     xwidth = (valid_Rcontact_frame(2)-valid_Rcontact_frame(1)) * 20;
+%     set(gcf,'defaultLegendAutoUpdate','off',"Position", [100,100,xwidth,400]);
+%     hold on;
+%     bg7 = fill([0,0.6,0.6,0],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','立脚期');hold on;
+%     bg8 = fill([0.6,1,1,0.6],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],[1, 0.5, 0],'EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','遊脚期');
+%     uistack(bg7, 'bottom');
+%     uistack(bg8, 'bottom');
+% 
+%     uniform_length = 100;
+%     % 線形補間とプロット
+%     for j = 1:length(valid_Rcontact_frame)-1
+%         current_cycle = angle_data(valid_Rcontact_frame(j):valid_Rcontact_frame(j+1));
+%         original_x = linspace(0, 1, length(current_cycle));
+%         uniform_x = linspace(0, 1, uniform_length);
+%         resampled_angles(:, j) = interp1(original_x, current_cycle, uniform_x);
+%         plot(uniform_x, resampled_angles(:,j), '-k', 'HandleVisibility', 'off');
+%     end
+% 
+%     % 平均線のプロット
+%     mean_resampled = mean(resampled_angles, 2);
+%     plot(uniform_x, mean_resampled, '-r', 'DisplayName', '平均', 'LineWidth', 2);
+% 
+%     % 凡例設定
+%     legend('Location','Best');
+% 
+%     % 軸ラベル、目盛り設定
+%     xlabel('歩行周期(%)');
+%     xticks(0.1:0.1:1); 
+%     xticklabels(arrayfun(@(v) sprintf('%.0f%%', v*100), xticks, 'UniformOutput', false));
+%     ylabel(['右　',angle_label]);
+%     ylim(y_lim);
+% 
+%     % 方向のテキストと矢印
+%     text(-0.1, max(ylim)-0.1, direction_max, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+%     annotation('arrow', [0.09, 0.09], [0.85, 0.95]);
+%     text(-0.1, min(ylim), direction_min, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+%     annotation('arrow', [0.09, 0.09], [0.15, 0.05]);
+% 
+%     % 地面接触時のライン
+%     l_x = line(xlim, [0 0], 'LineStyle', '-', 'Color', [0, 0, 0, 0.3], 'LineWidth', 0.7);
+%     uistack(l_x, "bottom");
+%     line([0 0], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+%     text(0.03, max(ylim), '初期接地', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+%     line([0.1 0.1], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+%     text(0.13, max(ylim), '反対側離地', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+%     line([0.3 0.3], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+%     text(0.33, max(ylim), '踵離地', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+%     line([0.5 0.5], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+%     text(0.53, max(ylim), '両脚支持', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+%     line([0.6 0.6], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+%     text(0.63, max(ylim), 'つま先離地', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+%     line([0.85 0.85], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+%     text(0.83, max(ylim), '下腿垂直', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+% 
+%     % グラフを保存
+%     exportgraphics(gcf, export_filename, 'Append', true);
+%     saveas(gcf, fullfile(indiv_figdir, ['右', angle_label, '_歩行周期調整.jpeg']));
+%     close(gcf);
+% end
+function compare_joint_angle(export_filename, indiv_figdir, Rangle_data, Langle_data, angle_label, y_lim, direction_max,direction_min,Rcontact_frame, Lcontact_frame, paralyzed_side)
+    % angle_data: 各関節の角度データ
+    % joint_name: 関節名 ('足関節' など)
+    % angle_label: 関節角度のラベル ('足関節角度(°)' など)
+    % y_lim: y軸の範囲
+    % x_labels: x軸の目盛りラベル
+    
+    % 図の作成
+    figure('Visible','off');
+    set(gcf,'defaultLegendAutoUpdate','off');
+    hold on;
+    bg9 = fill([0,0.6,0.6,0],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Stance Phase');hold on;
+    bg10 = fill([0.6,1,1,0.6],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],[1, 0.5, 0],'EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Swing Phase');
+    uistack(bg9, 'bottom');
+    uistack(bg10, 'bottom');
+    uniform_length = 100;
+    % 線形補間とプロット
+    for i = 1:length(Rcontact_frame)-1
+        Rcurrent_cycle = Rangle_data(Rcontact_frame(i):Rcontact_frame(i+1));
+        Roriginal_x = linspace(0, 1, length(Rcurrent_cycle));
+        Runiform_x = linspace(0, 1, uniform_length);
+        Rresampled_angles(:, i) = interp1(Roriginal_x, Rcurrent_cycle, Runiform_x);
+        % plot(Runiform_x, Rresampled_angles(:,i), '-k', 'HandleVisibility', 'off');
+    end
+    for i = 1:length(Lcontact_frame)-1
+        Lcurrent_cycle = Langle_data(Lcontact_frame(i):Lcontact_frame(i+1));
+        Loriginal_x = linspace(0, 1, length(Lcurrent_cycle));
+        Luniform_x = linspace(0, 1, uniform_length);
+        Lresampled_angles(:, i) = interp1(Loriginal_x, Lcurrent_cycle, Luniform_x);
+        % plot(Luniform_x, Lresampled_angles(:,i), '-k', 'HandleVisibility', 'off');
+    end
+    %% 麻痺側によって凡例の文字変更
+    if strcmp(paralyzed_side, '右')
+        right_label = 'Right Average ＊Paralyzed side';
+    else
+        right_label = 'Right Average';
+    end
+    if strcmp(paralyzed_side, '左')
+        left_label = 'Left Average ＊Paralyzed side';
+    else
+        left_label = 'Left Average';
+    end
+    % 平均線のプロット
+    Rmean_resampled = mean(Rresampled_angles, 2);
+    plot(Runiform_x, Rmean_resampled, '-', 'Color',[1, 0.5, 0], 'DisplayName', right_label, 'LineWidth', 2); hold on;
+    Lmean_resampled = mean(Lresampled_angles, 2);
+    plot(Luniform_x, Lmean_resampled, '-b', 'DisplayName', left_label, 'LineWidth', 2); hold on;
+    
+    % 凡例設定
+    legend('Location', 'Best');
+    
+    % 軸ラベル、目盛り設定
+    xlabel('Gait Cycle [%]');
+    xticks(0.1:0.1:1); 
+    xticklabels(arrayfun(@(v) sprintf('%.0f%%', v*100), xticks, 'UniformOutput', false));
+    ylabel(angle_label);
+    ylim(y_lim);
+    
+    % 方向のテキストと矢印
+    text(-0.1, max(ylim)-0.1, direction_max, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.85, 0.95]);
+    text(-0.1, min(ylim), direction_min, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.15, 0.05]);
+    
+    % 地面接触時のライン
+    l_x = line(xlim, [0 0], 'LineStyle', '-', 'Color', [0, 0, 0, 0.3], 'LineWidth', 0.7);
+    uistack(l_x, "bottom");
+    line([0 0], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.03, max(ylim), 'Initial Contact', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.1 0.1], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.13, max(ylim), 'Single Support Start', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.3 0.3], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.33, max(ylim), 'Heel Off', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.5 0.5], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.53, max(ylim), 'Double Support Start', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.6 0.6], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.63, max(ylim), 'Swing Phase start', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.85 0.85], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.83, max(ylim), 'Shank Vertical', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    
+    % グラフを保存
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf, fullfile(indiv_figdir, ['左右比較', angle_label, '.jpeg']));
+    close(gcf);
+end
+function compare_joint_angle_withsigma(export_filename, indiv_figdir, Rangle_data, Langle_data, angle_label, y_lim, direction_max,direction_min,Rcontact_frame, Lcontact_frame, paralyzed_side, nondisabled_data)
+    if strcmp(angle_label, '股関節外転角度 [°]')
+        angle_label = 'Hip joint Abduction Angle [deg]';
+        mean_data = readmatrix(nondisabled_data, 'Sheet', '両股関節外転角度正規化', 'Range', 'AC1:AC100');
+        std_data = readmatrix(nondisabled_data, 'Sheet', '両股関節外転角度正規化', 'Range', 'AD1:AD100');
+    else
+        if strcmp(angle_label, '膝関節角度 [°]')
+            angle_label = 'Knee Joint Angle [deg]';
+            mean_data = readmatrix(nondisabled_data, 'Sheet','両膝関節角度','Range','AD1:AD100');
+            std_data = readmatrix(nondisabled_data, 'Sheet','両膝関節角度','Range','AE1:AE100');
+        elseif strcmp(angle_label, '足関節角度 [°]')
+            angle_label = 'Ankle Joint Angle [deg]';
+            mean_data = readmatrix(nondisabled_data, 'Sheet','両足関節角度','Range','AD1:AD100');
+            std_data = readmatrix(nondisabled_data, 'Sheet','両足関節角度','Range','AE1:AE100');
+        elseif strcmp(angle_label, '股関節伸展角度 [°]')
+            angle_label = 'Hip Joint Extention Angle [deg]';
+            mean_data = readmatrix(nondisabled_data, 'Sheet','両股関節伸展角度','Range','AD1:AD100');
+            std_data = readmatrix(nondisabled_data, 'Sheet','両股関節伸展角度','Range','AE1:AE100');   
+        end
+    end
+    x_data = linspace(0,1,100);
+
+    % 図の作成
+    figure('Visible','off');
+    set(gcf,'defaultLegendAutoUpdate','off');
+    hold on;
+    bg9 = fill([0,0.6,0.6,0],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Stance Phase');hold on;
+    bg10 = fill([0.6,1,1,0.6],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],[1, 0.5, 0],'EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Swing Phase');
+    uistack(bg9, 'bottom');
+    uistack(bg10, 'bottom');
+    uniform_length = 100;
+    % 線形補間とプロット
+    for i = 1:length(Rcontact_frame)-1
+        Rcurrent_cycle = Rangle_data(Rcontact_frame(i):Rcontact_frame(i+1));
+        Roriginal_x = linspace(0, 1, length(Rcurrent_cycle));
+        Runiform_x = linspace(0, 1, uniform_length);
+        Rresampled_angles(:, i) = interp1(Roriginal_x, Rcurrent_cycle, Runiform_x);
+        % plot(Runiform_x, Rresampled_angles(:,i), '-k', 'HandleVisibility', 'off');
+    end
+    for i = 1:length(Lcontact_frame)-1
+        Lcurrent_cycle = Langle_data(Lcontact_frame(i):Lcontact_frame(i+1));
+        Loriginal_x = linspace(0, 1, length(Lcurrent_cycle));
+        Luniform_x = linspace(0, 1, uniform_length);
+        Lresampled_angles(:, i) = interp1(Loriginal_x, Lcurrent_cycle, Luniform_x);
+        % plot(Luniform_x, Lresampled_angles(:,i), '-k', 'HandleVisibility', 'off');
+    end
+    if strcmp(angle_label, 'Hip joint Abduction Angle [deg]')
+        mean_data = mean_data + (Rresampled_angles(1) - (Rresampled_angles(1) - Lresampled_angles(1)) / 2);
+    end
+    std_min = mean_data - std_data;
+    std_max = mean_data + std_data;
+
+    %% 麻痺側によって凡例の文字変更
+    if strcmp(paralyzed_side, '右')
+        right_label = 'Right Average ＊Paralyzed Side';
+    else
+        right_label = 'Right Average';
+    end
+    if strcmp(paralyzed_side, '左')
+        left_label = 'Left Average ＊Paralyzed Side';
+    else
+        left_label = 'Left Average';
+    end
+    % 平均線のプロット
+    Rmean_resampled = mean(Rresampled_angles, 2);
+    plot(Runiform_x, Rmean_resampled, '-', 'Color',[1, 0.5, 0], 'DisplayName', right_label, 'LineWidth', 2); hold on;
+    Lmean_resampled = mean(Lresampled_angles, 2);
+    plot(Luniform_x, Lmean_resampled, '-b', 'DisplayName', left_label, 'LineWidth', 2); hold on;
+    
+    % 凡例設定
+    for k=1:99
+        bg_grey = fill([x_data(k), x_data(k+1),x_data(k+1),x_data(k)], [std_min(k),std_min(k+1),std_max(k+1),std_max(k)], [0.5, 0.5, 0.5], 'FaceAlpha', 0.2, 'EdgeColor', 'none', 'HandleVisibility', 'off'); hold on;
+    end
+    uistack(bg_grey, 'bottom');
+    legend('Location', 'Best');
+    
+    % 軸ラベル、目盛り設定
+    xlabel('Gait Cycle [%]');
+    xticks(0.1:0.1:1); 
+    xticklabels(arrayfun(@(v) sprintf('%.0f%%', v*100), xticks, 'UniformOutput', false));
+    ylabel(angle_label);
+    ylim(y_lim);
+    
+    % 方向のテキストと矢印
+    text(-0.1, max(ylim)-0.1, direction_max, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.85, 0.95]);
+    text(-0.1, min(ylim), direction_min, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.15, 0.05]);
+    
+    % 地面接触時のライン
+    l_x = line(xlim, [0 0], 'LineStyle', '-', 'Color', [0, 0, 0, 0.3], 'LineWidth', 0.7);
+    uistack(l_x, "bottom");
+    line([0 0], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.03, max(ylim), 'Initial Contact', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.1 0.1], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.13, max(ylim), 'Single Support Start', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.3 0.3], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.33, max(ylim), 'Heel Off', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.5 0.5], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.53, max(ylim), 'Double Support Start', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.6 0.6], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.63, max(ylim), 'Swing Phase Start', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.85 0.85], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.83, max(ylim), 'Shank Vertical', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    
+    % グラフを保存
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf, fullfile(indiv_figdir, ['左右比較', angle_label, '(健常者標準偏差あり).jpeg']));
+    close(gcf);
+end
+
+function compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rangle_data, Langle_data, something_z,angle_label, y_lim, direction_max,direction_min,Rcontact_frame,comparing_label,paralyzed_side)
+    % 元々はCOMの高さの変位と比較を行いたかったのでcomとなっていま
+    
+    % 図の作成
+    uniform_length = 100;
+    % 線形補間とプロット
+    for i = 1:length(Rcontact_frame)-1
+        Rcurrent_cycle = Rangle_data(Rcontact_frame(i):Rcontact_frame(i+1));
+        Lcurrent_cycle = Langle_data(Rcontact_frame(i):Rcontact_frame(i+1));
+        something_current_cycle = something_z(Rcontact_frame(i):Rcontact_frame(i+1));
+
+        Roriginal_x = linspace(0, 1, length(Rcurrent_cycle));
+        Runiform_x = linspace(0, 1, uniform_length);
+        Rresampled_angles(:, i) = interp1(Roriginal_x, Rcurrent_cycle, Runiform_x);
+        something_resampled(:, i) = interp1(Roriginal_x, something_current_cycle, Runiform_x);
+        Lresampled_angles(:, i) = interp1(Roriginal_x, Lcurrent_cycle, Runiform_x);
+    end
+    figure('Position',[100,100,560,560],'Visible','off');
+    subplot(3,1,1);
+    
+    something_mean_resampled = mean(something_resampled, 2);
+    mean_for_ylim = mean(something_mean_resampled);
+    range_ofylim = max(something_mean_resampled) - min(something_mean_resampled);
+    cm_range_ofylim = 100 * range_ofylim;
+    min_ofylim = mean_for_ylim - 0.5*range_ofylim - 0.005;
+    max_ofylim = mean_for_ylim + 0.5*range_ofylim + 0.005;
+
+    title_name = ['高さ移動範囲 : ',num2str(cm_range_ofylim), 'cm'];
+    bga = fill([0,0.1,0.1,0],[min_ofylim,min_ofylim,max_ofylim,max_ofylim],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Double Support Phase');hold on;
+    bgb = fill([0.5,0.6,0.6,0.5],[min_ofylim,min_ofylim,max_ofylim,max_ofylim],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Double Support Phase');
+    uistack(bga, 'bottom');
+    uistack(bgb, 'bottom');
+    name_plot = [comparing_label,' 高さ'];
+    plot(Runiform_x, something_mean_resampled, '-k','DisplayName', name_plot, 'LineWidth',2);
+
+    xticks(0.1:0.1:1); 
+    xticklabels(arrayfun(@(v) sprintf('%.0f%%', v*100), xticks, 'UniformOutput', false));
+    title(title_name);
+    ylim([min_ofylim, max_ofylim]);
+    ylabel(comparing_label);
+    legend('Location','best');
+
+    subplot(3,1,[2,3]);
+    set(gcf,'defaultLegendAutoUpdate','off');
+    hold on;
+    bg9 = fill([0,0.6,0.6,0],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Stance Phase');hold on;
+    bg10 = fill([0.6,1,1,0.6],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],[1, 0.5, 0],'EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','Swing Phase');
+    uistack(bg9, 'bottom');
+    uistack(bg10, 'bottom');
+
+    if strcmp(paralyzed_side, '右')
+        right_label = 'Right Average ＊Paralyzed Side';
+    else
+        right_label = 'Right Average';
+    end
+    if strcmp(paralyzed_side, '左')
+        left_label = 'Left Average ＊Paralyzed Side';
+    else
+        left_label = 'Left Average';
+    end
+
+    % 平均線のプロット
+    
+    Rmean_resampled = mean(Rresampled_angles, 2);
+    plot(Runiform_x, Rmean_resampled, '-', 'Color',[1, 0.5, 0], 'DisplayName', right_label, 'LineWidth', 2); hold on;
+    Lmean_resampled = mean(Lresampled_angles, 2);
+    plot(Runiform_x, Lmean_resampled, '-b', 'DisplayName', left_label, 'LineWidth', 2); hold on;
+    
+    % 軸ラベル、目盛り設定
+    xlabel('Gait Cycle [%]');
+    xticks(0.1:0.1:1); 
+    xticklabels(arrayfun(@(v) sprintf('%.0f%%', v*100), xticks, 'UniformOutput', false));
+    ylabel(angle_label);
+    ylim(y_lim);
+
+    % 凡例設定
+    legend('Location', 'Best');  
+    
+    % 方向のテキストと矢印
+    text(-0.09, max(ylim)-0.2, direction_max, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.56, 0.66]);
+    text(-0.09, min(ylim), direction_min, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.15, 0.05]);
+    
+    % 地面接触時のライン
+    l_x = line(xlim, [0 0], 'LineStyle', '-', 'Color', [0, 0, 0, 0.3], 'LineWidth', 0.7);
+    uistack(l_x, "bottom");
+    line([0 0], ylim, 'LineStyle', '-', 'Color', [1, 0.5, 0, 0.2], 'LineWidth', 1);
+    text(0.03, max(ylim), 'Right Foot: Initial Contact', 'Rotation', 90,'Color', [1,0.5,0], 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.1 0.1], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.13, max(ylim), 'Right Foot: Single Support', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.3 0.3], ylim, 'LineStyle', '-', 'Color', [1, 0.5, 0, 0.2], 'LineWidth', 1);
+    text(0.33, max(ylim), 'Right Foot: Heel Off', 'Rotation', 90,'Color', [1,0.5,0], 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.5 0.5], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.53, max(ylim), 'Double Support Start', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.6 0.6], ylim, 'LineStyle', '-', 'Color', [1, 0.5, 0, 0.2], 'LineWidth', 1);
+    text(0.63, max(ylim), 'Right Foot: Swing Phase Start', 'Rotation', 90,'Color', [1, 0.5, 0], 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.85 0.85], ylim, 'LineStyle', '-', 'Color', [1, 0.5, 0, 0.2], 'LineWidth', 1);
+    text(0.83, max(ylim), 'Right Foot：Shank Vertical', 'Rotation', 90, 'Color', [1, 0.5, 0], 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf, fullfile(indiv_figdir, ['左右比較_', angle_label,'_',comparing_label, 'あり_右脚接地基準', '.jpeg']));
+    close(gcf);
+end
+function compare_joint_angle_addsomething(export_filename, indiv_figdir, Rangle_data, Langle_data, something_z,something_side,angle_label, y_lim, direction_max,direction_min,Rcontact_frame,Lcontact_frame,comparing_label,paralyzed_side)
+    % 元々はCOMの高さの変位と比較を行いたかったのでcomとなっていま
+    
+    % 図の作成
+    uniform_length = 100;
+    % 線形補間とプロット
+    for i = 1:length(Rcontact_frame)-1
+        Rcurrent_cycle = Rangle_data(Rcontact_frame(i):Rcontact_frame(i+1));
+        Roriginal_x = linspace(0, 1, length(Rcurrent_cycle));
+        Runiform_x = linspace(0, 1, uniform_length);
+        Rresampled_angles(:, i) = interp1(Roriginal_x, Rcurrent_cycle, Runiform_x);
+    end
+    for i = 1:length(Lcontact_frame)-1
+        Lcurrent_cycle = Langle_data(Lcontact_frame(i):Lcontact_frame(i+1));
+        Loriginal_x = linspace(0, 1, length(Lcurrent_cycle));
+        Luniform_x = linspace(0, 1, uniform_length);
+        Lresampled_angles(:, i) = interp1(Loriginal_x, Lcurrent_cycle, Luniform_x);
+        % plot(Luniform_x, Lresampled_angles(:,i), '-k', 'HandleVisibility', 'off');
+    end
+    if strcmp(something_side, '左')
+        for i = 1:length(Lcontact_frame)-1
+        something_current_cycle = something_z(Lcontact_frame(i):Lcontact_frame(i+1));
+        some_original_x = linspace(0,1,length(something_current_cycle));
+        some_uniform_x = linspace(0,1,uniform_length);
+        something_resampled(:, i) = interp1(some_original_x, something_current_cycle, some_uniform_x);
+        end
+    else
+        for i = 1:length(Rcontact_frame)-1
+        something_current_cycle = something_z(Rcontact_frame(i):Rcontact_frame(i+1));
+        some_original_x = linspace(0,1,length(something_current_cycle));
+        some_uniform_x = linspace(0,1,uniform_length);
+        something_resampled(:, i) = interp1(some_original_x, something_current_cycle, some_uniform_x);
+        end
+    end
+
+
+    figure('Position',[100,100,560,560],'Visible','off');
+    subplot(3,1,1);
+    
+    something_mean_resampled = mean(something_resampled, 2);
+    mean_for_ylim = mean(something_mean_resampled);
+    range_ofylim = max(something_mean_resampled) - min(something_mean_resampled);
+    cm_range_ofylim = 100 * range_ofylim;
+    min_ofylim = mean_for_ylim - 0.5*range_ofylim - 0.005;
+    max_ofylim = mean_for_ylim + 0.5*range_ofylim + 0.005;
+
+    title_name = ['高さ移動範囲 : ',num2str(cm_range_ofylim), 'cm'];
+    bga = fill([0,0.1,0.1,0],[min_ofylim,min_ofylim,max_ofylim,max_ofylim],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','両脚支持期');hold on;
+    bgb = fill([0.5,0.6,0.6,0.5],[min_ofylim,min_ofylim,max_ofylim,max_ofylim],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','両脚支持期');
+    uistack(bga, 'bottom');
+    uistack(bgb, 'bottom');
+    name_plot = [comparing_label,' 高さ'];
+    plot(Runiform_x, something_mean_resampled, '-k','DisplayName', name_plot, 'LineWidth',2);
+
+    xticks(0.1:0.1:1);
+    xticklabels(arrayfun(@(v) sprintf('%.0f%%', v*100), xticks, 'UniformOutput', false));
+    title(title_name);
+    ylim([min_ofylim, max_ofylim]);
+    ylabel(comparing_label);
+    legend('Location','best');
+
+    subplot(3,1,[2,3]);
+    set(gcf,'defaultLegendAutoUpdate','off');
+    hold on;
+    bg9 = fill([0,0.6,0.6,0],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],'b','EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','立脚期');hold on;
+    bg10 = fill([0.6,1,1,0.6],[y_lim(1),y_lim(1),y_lim(2),y_lim(2)],[1, 0.5, 0],'EdgeColor', 'none','FaceAlpha',0.05,'DisplayName','遊脚期');
+    uistack(bg9, 'bottom');
+    uistack(bg10, 'bottom');
+
+    if strcmp(paralyzed_side, '右')
+        right_label = '右平均 ＊麻痺側';
+    else
+        right_label = '右平均';
+    end
+    if strcmp(paralyzed_side, '左')
+        left_label = '左平均 ＊麻痺側';
+    else
+        left_label = '左平均';
+    end
+
+    % 平均線のプロット
+    
+    Rmean_resampled = mean(Rresampled_angles, 2);
+    plot(Runiform_x, Rmean_resampled, '-', 'Color',[1, 0.5, 0], 'DisplayName', right_label, 'LineWidth', 2); hold on;
+    Lmean_resampled = mean(Lresampled_angles, 2);
+    plot(Runiform_x, Lmean_resampled, '-b', 'DisplayName', left_label, 'LineWidth', 2); hold on;
+    
+    % 軸ラベル、目盛り設定
+    xlabel('歩行周期(%)');
+    xticks(0.1:0.1:1); 
+    xticklabels(arrayfun(@(v) sprintf('%.0f%%', v*100), xticks, 'UniformOutput', false));
+    ylabel(angle_label);
+    ylim(y_lim);
+
+    % 凡例設定
+    legend('Location', 'Best');  
+    
+    % 方向のテキストと矢印
+    text(-0.09, max(ylim)-0.2, direction_max, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.56, 0.66]);
+    text(-0.09, min(ylim), direction_min, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'Rotation', 90);
+    annotation('arrow', [0.09, 0.09], [0.15, 0.05]);
+    
+    % 地面接触時のライン
+    l_x = line(xlim, [0 0], 'LineStyle', '-', 'Color', [0, 0, 0, 0.3], 'LineWidth', 0.7);
+    uistack(l_x, "bottom");
+    line([0 0], ylim, 'LineStyle', '-', 'Color', [1, 0.5, 0, 0.2], 'LineWidth', 1);
+    text(0.03, max(ylim), '右脚:初期接地', 'Rotation', 90,'Color', [1,0.5,0], 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.1 0.1], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.13, max(ylim), '左脚:反対側離地', 'Rotation', 90,'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.3 0.3], ylim, 'LineStyle', '-', 'Color', [1, 0.5, 0, 0.2], 'LineWidth', 1);
+    text(0.33, max(ylim), '右脚:踵離地', 'Rotation', 90,'Color', [1,0.5,0], 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.5 0.5], ylim, 'LineStyle', '-', 'Color', [0, 0, 1, 0.2], 'LineWidth', 1);
+    text(0.53, max(ylim), '両脚支持', 'Rotation', 90, 'Color', 'blue', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.6 0.6], ylim, 'LineStyle', '-', 'Color', [1, 0.5, 0, 0.2], 'LineWidth', 1);
+    text(0.63, max(ylim), '右脚:つま先離地', 'Rotation', 90,'Color', [1, 0.5, 0], 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    line([0.85 0.85], ylim, 'LineStyle', '-', 'Color', [1, 0.5, 0, 0.2], 'LineWidth', 1);
+    text(0.83, max(ylim), '右脚：下腿垂直', 'Rotation', 90, 'Color', [1, 0.5, 0], 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf, fullfile(indiv_figdir, ['左右比較_', angle_label,'_',comparing_label, 'あり', '.jpeg']));
+    close(gcf);
+end
+
+
+function traject(export_filename, indiv_figdir,angle_x, angle_z, joint_name, x_lim, y_lim, CoM_x_5m, CoM_z_5m_mean, contact_frame, contact_end_frame)
+    figure('Visible','off');
+    for i = 1:length(contact_frame)-1
+        % 関節位置と重心位置のデータ取得
+        z_trajectory_stance = angle_z(contact_frame(i):contact_end_frame(i));
+        x_trajectory_stance = angle_x(contact_frame(i):contact_end_frame(i));
+        z_trajectory_swing = angle_z(contact_end_frame(i):contact_frame(i+1));
+        x_trajectory_swing = angle_x(contact_end_frame(i):contact_frame(i+1));
+        
+        CoM_x_div_stance = CoM_x_5m(contact_frame(i):contact_end_frame(i));
+        CoM_x_div_swing = CoM_x_5m(contact_end_frame(i):contact_frame(i+1));
+        if i==1
+            plot(x_trajectory_stance(1)-CoM_x_div_stance(1)-3, z_trajectory_stance(1),'Marker','o','DisplayName','Initial Position'); hold on;
+            plot(0, CoM_z_5m_mean, 'k.','MarkerSize', 20,'DisplayName','CoM'); hold on;
+        end
+        x_trajectory_stance_adj = x_trajectory_stance - CoM_x_div_stance;
+        plot(x_trajectory_stance_adj, z_trajectory_stance, 'Color', [1,0.5,0],'DisplayName','Stance Phase'); hold on;
+        x_trajectory_swing_adj = x_trajectory_swing - CoM_x_div_swing;
+        plot(x_trajectory_swing_adj, z_trajectory_swing, 'Color', [0,0,1], 'DisplayName','Swing Phase');hold on;
+        legend;
+        % ラベル設定
+        xlim(x_lim);
+        ylim(y_lim);
+        xlabel("The Position of "+joint_name+"relative to CoM (AP)");
+        ylabel('Hight from the Ground [m]');
+    end
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf, fullfile(indiv_figdir, ['軌跡_', joint_name, '.jpeg']));
+    close(gcf);
+end    
+function compared_traject(export_filename, indiv_figdir,Rangle_x, Rangle_z, Langle_x, Langle_z, joint_name, x_lim, y_lim, CoM_x_5m, CoM_z_5m_mean, Rcontact_frame, Rcontact_end_frame, Lcontact_frame, Lcontact_end_frame)
+    % 定義: 補間後の統一データ点数
+    unified_length = 100;
+    x_R_stance_interp = [];
+    z_R_stance_interp = [];
+    x_L_stance_interp = [];
+    z_L_stance_interp = [];
+    
+    figure('Visible','off');
+    hold on;
+    
+    % 右脚立脚期の軌道を処理
+    for i = 1:length(Rcontact_frame)-1
+        z_Rtrajectory_stance = Rangle_z(Rcontact_frame(i):Rcontact_end_frame(i));
+        x_Rtrajectory_stance = Rangle_x(Rcontact_frame(i):Rcontact_end_frame(i));
+        RCoM_x_div_stance = CoM_x_5m(Rcontact_frame(i):Rcontact_end_frame(i));
+        
+        % 軌道補正
+        x_Rtrajectory_stance_adj = x_Rtrajectory_stance - RCoM_x_div_stance;
+        
+        % 線形補間
+        lin_space = linspace(1, length(x_Rtrajectory_stance_adj), unified_length);
+        x_R_stance_interp(:, i) = interp1(1:length(x_Rtrajectory_stance_adj), x_Rtrajectory_stance_adj, lin_space, 'linear');
+        z_R_stance_interp(:, i) = interp1(1:length(z_Rtrajectory_stance), z_Rtrajectory_stance, lin_space, 'linear');
+    end
+    % 右脚遊脚期の軌道を処理
+    for i = 1:length(Rcontact_frame)-1
+        z_Rtrajectory_swing = Rangle_z(Rcontact_end_frame(i):Rcontact_frame(i+1));
+        x_Rtrajectory_swing = Rangle_x(Rcontact_end_frame(i):Rcontact_frame(i+1));
+        RCoM_x_div_swing = CoM_x_5m(Rcontact_end_frame(i):Rcontact_frame(i+1));
+        
+        % 軌道補正
+        x_Rtrajectory_swing_adj = x_Rtrajectory_swing - RCoM_x_div_swing;
+        
+        % 線形補間
+        lin_space = linspace(1, length(x_Rtrajectory_swing_adj), unified_length);
+        x_R_swing_interp(:, i) = interp1(1:length(x_Rtrajectory_swing_adj), x_Rtrajectory_swing_adj, lin_space, 'linear');
+        z_R_swing_interp(:, i) = interp1(1:length(z_Rtrajectory_swing), z_Rtrajectory_swing, lin_space, 'linear');
+    end
+    
+    % 左脚の軌道を処理
+    for i = 1:length(Lcontact_frame)-1
+        z_Ltrajectory_stance = Langle_z(Lcontact_frame(i):Lcontact_end_frame(i));
+        x_Ltrajectory_stance = Langle_x(Lcontact_frame(i):Lcontact_end_frame(i));
+        LCoM_x_div_stance = CoM_x_5m(Lcontact_frame(i):Lcontact_end_frame(i));
+        
+        % 軌道補正
+        x_Ltrajectory_stance_adj = x_Ltrajectory_stance - LCoM_x_div_stance;
+        
+        % 線形補間
+        lin_space = linspace(1, length(x_Ltrajectory_stance_adj), unified_length);
+        x_L_stance_interp(:, i) = interp1(1:length(x_Ltrajectory_stance_adj), x_Ltrajectory_stance_adj, lin_space, 'linear');
+        z_L_stance_interp(:, i) = interp1(1:length(z_Ltrajectory_stance), z_Ltrajectory_stance, lin_space, 'linear');
+    end
+    for i = 1:length(Lcontact_frame)-1
+        z_Ltrajectory_swing = Langle_z(Lcontact_end_frame(i):Lcontact_frame(i+1));
+        x_Ltrajectory_swing = Langle_x(Lcontact_end_frame(i):Lcontact_frame(i+1));
+        LCoM_x_div_swing = CoM_x_5m(Lcontact_end_frame(i):Lcontact_frame(i+1));
+        
+        % 軌道補正
+        x_Ltrajectory_swing_adj = x_Ltrajectory_swing - LCoM_x_div_swing;
+        
+        % 線形補間
+        lin_space = linspace(1, length(x_Ltrajectory_swing_adj), unified_length);
+        x_L_swing_interp(:, i) = interp1(1:length(x_Ltrajectory_swing_adj), x_Ltrajectory_swing_adj, lin_space, 'linear');
+        z_L_swing_interp(:, i) = interp1(1:length(z_Ltrajectory_swing), z_Ltrajectory_swing, lin_space, 'linear');
+    end
+
+    % 平均軌道を計算
+    mean_x_Rstance = mean(x_R_stance_interp, 2, 'omitnan');
+    mean_z_Rstance = mean(z_R_stance_interp, 2, 'omitnan');
+    mean_x_Rswing = mean(x_R_swing_interp, 2, 'omitnan');
+    mean_z_Rswing = mean(z_R_swing_interp, 2, 'omitnan');
+    mean_x_Lstance = mean(x_L_stance_interp, 2, 'omitnan');
+    mean_z_Lstance = mean(z_L_stance_interp, 2, 'omitnan');
+    mean_x_Lswing = mean(x_L_swing_interp, 2, 'omitnan');
+    mean_z_Lswing = mean(z_L_swing_interp, 2, 'omitnan');
+
+    % 軌道のプロット
+    plot(mean_x_Rstance, mean_z_Rstance, '-','Color', [1,0,0], 'Marker', 'x','MarkerIndices', 1:20:100,'MarkerSize',8,'LineWidth', 1, 'DisplayName', 'Right Foot: Stance Phase　Trajectory Ave');hold on;
+    plot(mean_x_Rswing, mean_z_Rswing, '-','Color', [1,0.5,0], 'Marker', 'x','MarkerIndices', 1:20:100,'MarkerSize',8,'LineWidth', 1, 'DisplayName', 'Right Foot: Swing Phase　Trajectory Ave');hold on;
+    plot(mean_x_Lstance, mean_z_Lstance, '-', 'Color', [0,0,1], 'Marker', '^','MarkerIndices', 1:20:100,'MarkerSize',3, 'LineWidth', 1, 'DisplayName', 'Left Foot: Stance Phase　Trajectory Ave');hold on;
+    plot(mean_x_Lswing, mean_z_Lswing, '-', 'Color', [0,0.5,1], 'Marker', '^','MarkerIndices', 1:20:100,'MarkerSize',3,'LineWidth', 1, 'DisplayName', 'Left Foot: Swing Phase　Trajectory Ave');hold on;
+
+    % 重心位置をプロット
+    plot(0, CoM_z_5m_mean, 'k.', 'MarkerSize', 20, 'DisplayName', 'CoM');
+    
+    % グラフ設定
+    legend;
+    xlim(x_lim);
+    ylim(y_lim);
+    xlabel("The Position of " + joint_name + "relative to the CoM (AP) [m]");
+    ylabel('Height from the Ground [m]');
+    title("Comparison of both legs - " + joint_name);
+
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf, fullfile(indiv_figdir, ['左右比較_', joint_name, '.jpeg']));
+    close(gcf);
+end
+    function compared_traject_onlyswing(export_filename, indiv_figdir,Rangle_x, Rangle_z, Langle_x, Langle_z, joint_name, x_lim, y_lim, CoM_x_5m, CoM_z_5m_mean, Rcontact_frame, Rcontact_end_frame, Lcontact_frame, Lcontact_end_frame)
+    % 定義: 補間後の統一データ点数
+    unified_length = 100;
+    x_R_swing_interp = [];
+    z_R_swing_interp = [];
+    x_L_swing_interp = [];
+    z_L_swing_interp = [];
+    
+    figure('Visible','off');
+    hold on;
+    % 右脚遊脚期の軌道を処理
+    for i = 1:length(Rcontact_frame)-1
+        z_Rtrajectory_swing = Rangle_z(Rcontact_end_frame(i):Rcontact_frame(i+1));
+        x_Rtrajectory_swing = Rangle_x(Rcontact_end_frame(i):Rcontact_frame(i+1));
+        RCoM_x_div_swing = CoM_x_5m(Rcontact_end_frame(i):Rcontact_frame(i+1));
+        
+        % 軌道補正
+        x_Rtrajectory_swing_adj = x_Rtrajectory_swing - RCoM_x_div_swing;
+        
+        % 線形補間
+        lin_space = linspace(1, length(x_Rtrajectory_swing_adj), unified_length);
+        x_R_swing_interp(:, i) = interp1(1:length(x_Rtrajectory_swing_adj), x_Rtrajectory_swing_adj, lin_space, 'linear');
+        z_R_swing_interp(:, i) = interp1(1:length(z_Rtrajectory_swing), z_Rtrajectory_swing, lin_space, 'linear');
+    end
+    
+    for i = 1:length(Lcontact_frame)-1
+        z_Ltrajectory_swing = Langle_z(Lcontact_end_frame(i):Lcontact_frame(i+1));
+        x_Ltrajectory_swing = Langle_x(Lcontact_end_frame(i):Lcontact_frame(i+1));
+        LCoM_x_div_swing = CoM_x_5m(Lcontact_end_frame(i):Lcontact_frame(i+1));
+        
+        % 軌道補正
+        x_Ltrajectory_swing_adj = x_Ltrajectory_swing - LCoM_x_div_swing;
+        
+        % 線形補間
+        lin_space = linspace(1, length(x_Ltrajectory_swing_adj), unified_length);
+        x_L_swing_interp(:, i) = interp1(1:length(x_Ltrajectory_swing_adj), x_Ltrajectory_swing_adj, lin_space, 'linear');
+        z_L_swing_interp(:, i) = interp1(1:length(z_Ltrajectory_swing), z_Ltrajectory_swing, lin_space, 'linear');
+    end
+
+    % 平均軌道を計算
+    mean_x_Rswing = mean(x_R_swing_interp, 2, 'omitnan');
+    mean_z_Rswing = mean(z_R_swing_interp, 2, 'omitnan');
+    mean_x_Lswing = mean(x_L_swing_interp, 2, 'omitnan');
+    mean_z_Lswing = mean(z_L_swing_interp, 2, 'omitnan');
+
+    % 軌道のプロット
+    plot(mean_x_Rswing, mean_z_Rswing, '-','Color', [1,0.5,0], 'LineWidth', 1, 'DisplayName', 'Right Foot: Swing Phase　Trajectory Ave');hold on;
+    plot(mean_x_Lswing, mean_z_Lswing, '-', 'Color', [0,0.5,1], 'LineWidth', 1, 'DisplayName', 'Left Foot: Swing Phase　Trajectory Ave');hold on;
+
+    % 重心位置をプロット
+    plot(0, CoM_z_5m_mean, 'k.', 'MarkerSize', 20, 'DisplayName', 'CoM');
+    
+    % グラフ設定
+    legend;
+    xlim(x_lim);
+    ylim(y_lim);
+    xlabel("The Position of " + joint_name + "relative to CoM (AP) [m]");
+    ylabel('Height from the Ground [m]');
+    title("Comparison of both legs - " + joint_name);
+
+    exportgraphics(gcf, export_filename, 'Append', true);
+    saveas(gcf, fullfile(indiv_figdir, ['左右比較(立脚期なし)_', joint_name, '.jpeg']));
+    close(gcf);
+end
+
+
+compare_joint_angle(export_filename, indiv_figdir,Rknee_angle,Lknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
+compare_joint_angle(export_filename, indiv_figdir,Rankle_angle,Lankle_angle, '足関節角度 [°]', [-45,30],'Dorsiflexion','Plantarflexion', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
+compare_joint_angle(export_filename, indiv_figdir,Rhip_extension,Lhip_extension, '股関節伸展角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
+compare_joint_angle(export_filename, indiv_figdir,Rhip_abduction,Lhip_abduction, '股関節外転角度 [°]', [-12,12],'Abduction','Adduction', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
+compare_joint_angle(export_filename, indiv_figdir,Rhip_rotation,Lhip_rotation, '股関節内旋角度 [°] ', [-15,15],'Internal Rotation','External Rotation', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
+
+compare_joint_angle_withsigma(export_filename, indiv_figdir,Rknee_angle,Lknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side,nondisabled_data);
+compare_joint_angle_withsigma(export_filename, indiv_figdir,Rankle_angle,Lankle_angle, '足関節角度 [°]', [-45,30],'Dorsiflexion','Plantarflexion', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side,nondisabled_data);
+compare_joint_angle_withsigma(export_filename, indiv_figdir,Rhip_extension,Lhip_extension, '股関節伸展角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side,nondisabled_data);
+compare_joint_angle_withsigma(export_filename, indiv_figdir,Rhip_abduction,Lhip_abduction, '股関節外転角度 [°]', [-12,12],'Abduction','Adduction', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side,nondisabled_data);
+
+compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, CoM_z_5m,'両方','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'重心位置',paralyzed_side);
+compare_joint_angle_addsomething(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, CoM_z_5m,'両方','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'重心位置',paralyzed_side);
+compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Rthigh_z_5,'右','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'右大腿',paralyzed_side);
+compare_joint_angle_addsomething(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Rthigh_z_5,'右','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'右大腿',paralyzed_side);
+compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Lthigh_z_5,'左','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'左大腿',paralyzed_side);
+compare_joint_angle_addsomething(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Lthigh_z_5,'左','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'左大腿',paralyzed_side);
+
+compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, CoM_z_5m,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'重心位置',paralyzed_side);
+compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, CoM_z_5m,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'重心位置',paralyzed_side);
+compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Rthigh_z_5,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'右大腿',paralyzed_side);
+compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Rthigh_z_5,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'右大腿',paralyzed_side);
+compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Lthigh_z_5,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'左大腿',paralyzed_side);
+compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Lthigh_z_5,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'左大腿',paralyzed_side);
+
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'右', Rknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'左', Lknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Lcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'右', Rankle_angle, '足関節角度 [°]', [-45,30],'Dorsiflexion','Plantarflexion', valid_Rcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'左', Lankle_angle, '足関節角度 [°]', [-45,30],'Dorsiflexion','Plantarflexion', valid_Lcontact_frame, next_column);
+
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'右', Rhip_extension, '股関節伸展角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'左', Lhip_extension, '股関節伸展角度 [°]', [-15,45],'Flextion','Extension', valid_Lcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'右', Rhip_rotation, '股関節内旋角度 [°]', [-15,15],'Internal Rotation','External Rotation', valid_Rcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'左', Lhip_rotation, '股関節内旋角度 [°]', [-15,15],'Internal Rotation','External Rotation', valid_Lcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'右', Rhip_abduction, '股関節外転角度 [°]', [-12,12],'Abduction','Adduction', valid_Rcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'左', Lhip_abduction, '股関節外転角度 [°]', [-12,12],'Abduction','Adduction', valid_Lcontact_frame, next_column);
+% Rplot_joint_angle_adjcycle(export_filename, indiv_figdir, Rhip_abduction, '股関節外転角度 [°]', [-12,12],'外転方向','内転方向', valid_Rcontact_frame);
+
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'右', L5_ay_5, 'L5左右方向の加速度 [m/s^2]', [-6,6],'Right','Left', valid_Rcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'', Lumber_lateralFlex, '腰椎側屈角度 [°]', [-15,15],'Right','Left', valid_Rcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'', Pelvis2Neck_lateralFlex, '体幹側屈角度 [°]', [-15,15],'Right','Left', valid_Rcontact_frame, next_column);
+next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'', Pelvis2Neck_Flex, '体幹前傾角度 [°]', [-15,15],'Anterior','Posterior', valid_Rcontact_frame, next_column);
+
+%% -- 関節の軌跡導出 -- %%
+traject(export_filename, indiv_figdir,Rthigh_x_5, Rthigh_z_5, 'Right Thigh', [-0.2,0.2], [0.8,1], CoM_x_5m, CoM_z_5m_mean, valid_Rcontact_frame, valid_Rcontact_end_frame);
+traject(export_filename, indiv_figdir,Lthigh_x_5, Lthigh_z_5, 'Left Thigh', [-0.2,0.2], [0.8,1], CoM_x_5m, CoM_z_5m_mean, valid_Lcontact_frame, valid_Lcontact_end_frame);
+compared_traject(export_filename, indiv_figdir,Rthigh_x_5, Rthigh_z_5, Lthigh_x_5, Lthigh_z_5, 'Comparison of trajectory of Thigh', [-0.2,0.2], [0.8,1], CoM_x_5m, CoM_z_5m_mean, valid_Rcontact_frame, valid_Rcontact_end_frame, valid_Lcontact_frame, valid_Lcontact_end_frame);
+traject(export_filename, indiv_figdir,Rtoe_x_5, Rtoe_z_5, 'Right Toe', [-0.5,0.5], [0,1], CoM_x_5m, CoM_z_5m_mean, valid_Rcontact_frame, valid_Rcontact_end_frame);
+traject(export_filename, indiv_figdir,Ltoe_x_5, Ltoe_z_5, 'Left Toe', [-0.5,0.5], [0,1], CoM_x_5m, CoM_z_5m_mean, valid_Lcontact_frame, valid_Lcontact_end_frame);
+compared_traject(export_filename, indiv_figdir,Rtoe_x_5, Rtoe_z_5, Ltoe_x_5, Ltoe_z_5, 'Comparison of trajectory of Toe', [-0.5,0.5], [0,1], CoM_x_5m, CoM_z_5m_mean, valid_Rcontact_frame, valid_Rcontact_end_frame, valid_Lcontact_frame, valid_Lcontact_end_frame);
+compared_traject_onlyswing(export_filename, indiv_figdir,Rtoe_x_5, Rtoe_z_5, Ltoe_x_5, Ltoe_z_5, 'Comparison of trajectory of Toe', [-0.5,0.5], [0,1], CoM_x_5m, CoM_z_5m_mean, valid_Rcontact_frame, valid_Rcontact_end_frame, valid_Lcontact_frame, valid_Lcontact_end_frame);
+
+disp('図の出力が完了しました')
+
+end
