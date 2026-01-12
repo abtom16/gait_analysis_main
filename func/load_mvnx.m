@@ -13,23 +13,16 @@ function [mvnx] = load_mvnx(file)
         end
     end
 
-    % show progress bar
-    wb = waitbar(0, ['Loading file ', file]);
-    onCleanup(@closewb);
-    function closewb()
-        close(wb);
-    end
-
     %read the mvnx file
     xDoc = xmlread(file);
 
     %parse xDoc into a MATLAB structure
     mvnx = struct;
-    [mvnx] = parseChildNodes(xDoc, mvnx, wb);
+    [mvnx] = parseChildNodes(xDoc, mvnx);
 end
 
 % ----- Subfunction parseChildNodes -----
-function [Data] = parseChildNodes(theNode, Data, wb)
+function [Data] = parseChildNodes(theNode, Data)
     % Recurse over node children.
     if hasChildNodes(theNode)
         childNodes = getChildNodes(theNode);
@@ -37,7 +30,7 @@ function [Data] = parseChildNodes(theNode, Data, wb)
 
         for count = 1:numChildNodes
             theChild = item(childNodes,count-1);
-            [name,Data] = getNodeData(theChild, Data, wb);
+            [name,Data] = getNodeData(theChild, Data);
 
             if (~strcmp(name,'#text') && ~strcmp(name,'#comment') && ~strcmp(name,'#cdata_dash_section'))
                 if (~strcmp(name,'mvnx') && ~strcmp(name,'subject'))
@@ -52,7 +45,7 @@ function [Data] = parseChildNodes(theNode, Data, wb)
 end
 
 % ----- Subfunction parseSegmentChildNodes -----
-function [children,Data] = parseSegmentChildNodes(theNode, Data, wb)
+function [children,Data] = parseSegmentChildNodes(theNode, Data)
     % Recurse over node children.
     children = struct;
     if hasChildNodes(theNode)
@@ -62,7 +55,7 @@ function [children,Data] = parseSegmentChildNodes(theNode, Data, wb)
         myName = toCharArray(getNodeName(theNode))';
         for count = 1:numChildNodes
             theChild = item(childNodes,count-1);
-            [name,childs,Data] = getSegmentNodeData(theChild, Data, numChildNodes, myName, wb);
+            [name,childs,Data] = getSegmentNodeData(theChild, Data, numChildNodes, myName);
 
             if (~strcmp(name,'#text') && ~strcmp(name,'#comment'))
                 if (isempty(fieldnames(childs)))
@@ -124,13 +117,13 @@ function [name,childs,Data] = getSegmentPointNodeData(theNode, Data)
 end
 
 % ----- Subfunction getSegmentNodeData -----
-function [name,childs,Data] = getSegmentNodeData(theNode, Data, numChildNodes, parentName, wb)
+function [name,childs,Data] = getSegmentNodeData(theNode, Data, numChildNodes, parentName)
     name = toCharArray(getNodeName(theNode))';
     if (~strcmp(name,'#text'))
         [attr] = parseSegmentAttributes(theNode);
 
         if (strcmp(name,'frame'))
-            [childs,Data] = parseSegmentChildNodes(theNode, Data, wb);
+            [childs,Data] = parseSegmentChildNodes(theNode, Data);
             if isfield(attr, 'index')
                 frame = str2double(attr.index) + 1;
             else
@@ -153,10 +146,6 @@ function [name,childs,Data] = getSegmentNodeData(theNode, Data, numChildNodes, p
                     end
                 end
             else
-                if mod(frame, 200) == 0
-                    val = frame / numChildNodes;
-                    waitbar(val, wb);
-                end
 
                 for a = 2 : numel(fieldnames(attr))
                     Data.frame(frame).(char(attributes(a))) = attr.(char(attributes(a)));
@@ -192,13 +181,13 @@ function [name,childs,Data] = getSegmentNodeData(theNode, Data, numChildNodes, p
                     elseif contains(fieldName, 'marker')
                         Data.frame(frame).('marker') = childs.(fieldName);
                         if ~isfield(Data, 'markers')
-                            markerIdx = 1
-                            Data.markers(markerIdx) = struct
+                            markerIdx = 1;
+                            Data.markers(markerIdx) = struct;
                         else
-                            markerIdx = 1 + length(Data.markers)
+                            markerIdx = 1 + length(Data.markers);
                         end
-                        Data.markers(markerIdx).frame = frame
-                        Data.markers(markerIdx).text = childs.(fieldName)
+                        Data.markers(markerIdx).frame = frame;
+                        Data.markers(markerIdx).text = childs.(fieldName);
                         continue;
                     else
                         dataName = 'segmentData';
@@ -231,7 +220,7 @@ function [name,childs,Data] = getSegmentNodeData(theNode, Data, numChildNodes, p
         else
             if (isempty(fieldnames(attr)))
                 %parse child nodes
-                [childs,Data] = parseSegmentChildNodes(theNode, Data, wb);
+                [childs,Data] = parseSegmentChildNodes(theNode, Data);
             elseif (strcmp(name,'segment') || strcmp(name,'fingerTrackingSegment'))
                 if contains(parentName, 'fingerTrackingSegments')
                     if contains(attr.label, 'Left')
@@ -260,7 +249,7 @@ function [name,childs,Data] = getSegmentNodeData(theNode, Data, numChildNodes, p
                 end
                 Data.sensorData(index).('label') = attr.label;
             elseif (strcmp(name,'joint'))
-                [childs,Data] = parseSegmentChildNodes(theNode, Data, wb);
+                [childs,Data] = parseSegmentChildNodes(theNode, Data);
                 if contains(parentName, 'fingerTrackingJoints')
                     if contains(attr.label, 'Left')
                        side = 'Left';
@@ -306,7 +295,7 @@ function [name,childs,Data] = getSegmentNodeData(theNode, Data, numChildNodes, p
                 Data.footContact(str2double(attr.index) + 1).('label') = attr.label;
             else
                 %parse child nodes
-                [childs,Data] = parseSegmentChildNodes(theNode, Data, wb);
+                [childs,Data] = parseSegmentChildNodes(theNode, Data);
             end
         end
     else
@@ -315,7 +304,7 @@ function [name,childs,Data] = getSegmentNodeData(theNode, Data, numChildNodes, p
 end
 
 % ----- Subfunction getNodeData -----
-function [name, Data] = getNodeData(theNode, Data, wb)
+function [name, Data] = getNodeData(theNode, Data)
     % Create structure of node info.
 
     %make sure name is allowed as structure name
@@ -326,10 +315,10 @@ function [name, Data] = getNodeData(theNode, Data, wb)
 
     if (strcmp(name,'subject'))
         [Data] = parseMetaAttributes(theNode, Data, name);
-        [~,Data] = parseSegmentChildNodes(theNode, Data, wb);
+        [~,Data] = parseSegmentChildNodes(theNode, Data);
     else
         [Data] = parseMetaAttributes(theNode, Data, name);
-        [Data] = parseChildNodes(theNode, Data, wb);
+        [Data] = parseChildNodes(theNode, Data);
     end
 end
 

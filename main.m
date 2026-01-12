@@ -8,7 +8,7 @@ fig = uifigure('Position', [100, 600, 400, 200], 'Name', 'ファイル処理ア�
 set(fig, 'WindowStyle', 'alwaysontop')
 progressBar = uiprogressdlg(fig, 'Title', '処理中', 'Message', '処理を開始しています...', 'Value', 0);
 
-filepath = 'C:\abe_backup\backup\01_修士\06_Xsens_analysis\01_Xsens_Data\main_expariment\20251205\sub28';
+filepath = 'C:\abe_backup\backup\01_修士\06_Xsens_analysis\01_Xsens_Data\main_expariment\20250318\sub5';
 
 % ディレクトリ内のすべてのファイルを取得
 allFiles = dir(fullfile(filepath, '*.xlsx*'));
@@ -22,7 +22,13 @@ dlg_answer = questdlg(prompt, '麻痺側の選択', '右', '左','どちらで�
 if isempty(dlg_answer)
     error('麻痺側の選択がキャンセルされました。');
 end
-paralyzed_side = dlg_answer;
+if strcmp(dlg_answer, '右')
+    affected_side = 'Right';
+elseif strcmp(dlg_answer, '左')
+    affected_side = 'Left';
+else
+    affected_side = 'Unknown';  % Default value if neither option is selected
+end
 
 if ~isempty(modifiedFiles)
     % Modifiedファイルが存在する場合のメッセージと選択ダイアログ
@@ -56,7 +62,7 @@ for i = 1:length(without_modified_allFiles)
 
     if skipModifying == false
         % modifingdata 関数の実行
-        modifing_data(fullfilename);
+        modifing_data(char(fullfilename), affected_side);
         progressBar.Message = sprintf('処理中: %s - Modifiedデータ処理完了 (%d/%d)', filename, i, length(without_modified_allFiles));
         current_step = current_step + 1;
         progressBar.Value = current_step / total_steps;
@@ -73,7 +79,7 @@ for i = 1:length(without_modified_allFiles)
         current_step = current_step + 1;
         progressBar.Value = current_step / total_steps;
     elseif strcmp(dlg_answer, '右') || strcmp(dlg_answer, '左')
-        Export_fig(Modified_input_file, paralyzed_side);
+        Export_fig(Modified_input_file, affected_side);
         progressBar.Message = sprintf('処理中: %s - 図の導出処理完了 (%d/%d)', filename, i, length(without_modified_allFiles));
         current_step = current_step + 1;
         progressBar.Value = current_step / total_steps;

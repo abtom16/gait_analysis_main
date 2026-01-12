@@ -1,4 +1,4 @@
-function[] = Export_fig(Modified_input_file,paralyzed_side)
+function[] = Export_fig(Modified_input_file,affected_side)
 %function[] = Export_fig(input_file_name2) %%ファイル選択の時はこっち
 %input_file_name2 = 'D:\1修士\６.Xsens_analysis\歩容特性分析_abe_健常者分析用\健常者データ\Modified_kitahara_sub1.xlsx';
 df = readmatrix(Modified_input_file, 'Sheet','時系列データ 11m');
@@ -710,7 +710,7 @@ end
 %     saveas(gcf, fullfile(indiv_figdir, ['右', angle_label, '_歩行周期調整.jpeg']));
 %     close(gcf);
 % end
-function compare_joint_angle(export_filename, indiv_figdir, Rangle_data, Langle_data, angle_label, y_lim, direction_max,direction_min,Rcontact_frame, Lcontact_frame, paralyzed_side)
+function compare_joint_angle(export_filename, indiv_figdir, Rangle_data, Langle_data, angle_label, y_lim, direction_max,direction_min,Rcontact_frame, Lcontact_frame, affected_side)
     % angle_data: 各関節の角度データ
     % joint_name: 関節名 ('足関節' など)
     % angle_label: 関節角度のラベル ('足関節角度(°)' など)
@@ -742,12 +742,12 @@ function compare_joint_angle(export_filename, indiv_figdir, Rangle_data, Langle_
         % plot(Luniform_x, Lresampled_angles(:,i), '-k', 'HandleVisibility', 'off');
     end
     %% 麻痺側によって凡例の文字変更
-    if strcmp(paralyzed_side, '右')
+    if strcmp(affected_side, 'Right')
         right_label = 'Right Average ＊Paralyzed side';
     else
         right_label = 'Right Average';
     end
-    if strcmp(paralyzed_side, '左')
+    if strcmp(affected_side, 'Left')
         left_label = 'Left Average ＊Paralyzed side';
     else
         left_label = 'Left Average';
@@ -795,7 +795,7 @@ function compare_joint_angle(export_filename, indiv_figdir, Rangle_data, Langle_
     saveas(gcf, fullfile(indiv_figdir, ['左右比較', angle_label, '.jpeg']));
     close(gcf);
 end
-function compare_joint_angle_withsigma(export_filename, indiv_figdir, Rangle_data, Langle_data, angle_label, y_lim, direction_max,direction_min,Rcontact_frame, Lcontact_frame, paralyzed_side, nondisabled_data)
+function compare_joint_angle_withsigma(export_filename, indiv_figdir, Rangle_data, Langle_data, angle_label, y_lim, direction_max,direction_min,Rcontact_frame, Lcontact_frame, affected_side, nondisabled_data)
     if strcmp(angle_label, '股関節外転角度 [°]')
         angle_label = 'Hip joint Abduction Angle [deg]';
         mean_data = readmatrix(nondisabled_data, 'Sheet', '両股関節外転角度正規化', 'Range', 'AC1:AC100');
@@ -848,12 +848,12 @@ function compare_joint_angle_withsigma(export_filename, indiv_figdir, Rangle_dat
     std_max = mean_data + std_data;
 
     %% 麻痺側によって凡例の文字変更
-    if strcmp(paralyzed_side, '右')
+    if strcmp(affected_side, 'Right')
         right_label = 'Right Average ＊Paralyzed Side';
     else
         right_label = 'Right Average';
     end
-    if strcmp(paralyzed_side, '左')
+    if strcmp(affected_side, 'Left')
         left_label = 'Left Average ＊Paralyzed Side';
     else
         left_label = 'Left Average';
@@ -906,7 +906,7 @@ function compare_joint_angle_withsigma(export_filename, indiv_figdir, Rangle_dat
     close(gcf);
 end
 
-function compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rangle_data, Langle_data, something_z,angle_label, y_lim, direction_max,direction_min,Rcontact_frame,comparing_label,paralyzed_side)
+function compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rangle_data, Langle_data, something_z,angle_label, y_lim, direction_max,direction_min,Rcontact_frame,comparing_label,affected_side)
     % 元々はCOMの高さの変位と比較を行いたかったのでcomとなっていま
     
     % 図の作成
@@ -956,12 +956,12 @@ function compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_fi
     uistack(bg9, 'bottom');
     uistack(bg10, 'bottom');
 
-    if strcmp(paralyzed_side, '右')
+    if strcmp(affected_side, 'Right')
         right_label = 'Right Average ＊Paralyzed Side';
     else
         right_label = 'Right Average';
     end
-    if strcmp(paralyzed_side, '左')
+    if strcmp(affected_side, 'Left')
         left_label = 'Left Average ＊Paralyzed Side';
     else
         left_label = 'Left Average';
@@ -1010,7 +1010,7 @@ function compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_fi
     saveas(gcf, fullfile(indiv_figdir, ['左右比較_', angle_label,'_',comparing_label, 'あり_右脚接地基準', '.jpeg']));
     close(gcf);
 end
-function compare_joint_angle_addsomething(export_filename, indiv_figdir, Rangle_data, Langle_data, something_z,something_side,angle_label, y_lim, direction_max,direction_min,Rcontact_frame,Lcontact_frame,comparing_label,paralyzed_side)
+function compare_joint_angle_addsomething(export_filename, indiv_figdir, Rangle_data, Langle_data, something_z,something_side,angle_label, y_lim, direction_max,direction_min,Rcontact_frame,Lcontact_frame,comparing_label,affected_side)
     % 元々はCOMの高さの変位と比較を行いたかったのでcomとなっていま
     
     % 図の作成
@@ -1079,12 +1079,12 @@ function compare_joint_angle_addsomething(export_filename, indiv_figdir, Rangle_
     uistack(bg9, 'bottom');
     uistack(bg10, 'bottom');
 
-    if strcmp(paralyzed_side, '右')
+    if strcmp(affected_side, 'Right')
         right_label = '右平均 ＊麻痺側';
     else
         right_label = '右平均';
     end
-    if strcmp(paralyzed_side, '左')
+    if strcmp(affected_side, 'Left')
         left_label = '左平均 ＊麻痺側';
     else
         left_label = '左平均';
@@ -1330,30 +1330,30 @@ end
 end
 
 
-% compare_joint_angle(export_filename, indiv_figdir,Rknee_angle,Lknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
-% compare_joint_angle(export_filename, indiv_figdir,Rankle_angle,Lankle_angle, '足関節角度 [°]', [-45,30],'Dorsiflexion','Plantarflexion', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
-% compare_joint_angle(export_filename, indiv_figdir,Rhip_extension,Lhip_extension, '股関節伸展角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
-% compare_joint_angle(export_filename, indiv_figdir,Rhip_abduction,Lhip_abduction, '股関節外転角度 [°]', [-12,12],'Abduction','Adduction', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
-% compare_joint_angle(export_filename, indiv_figdir,Rhip_rotation,Lhip_rotation, '股関節内旋角度 [°] ', [-15,15],'Internal Rotation','External Rotation', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side);
+% compare_joint_angle(export_filename, indiv_figdir,Rknee_angle,Lknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,affected_side);
+% compare_joint_angle(export_filename, indiv_figdir,Rankle_angle,Lankle_angle, '足関節角度 [°]', [-45,30],'Dorsiflexion','Plantarflexion', valid_Rcontact_frame,valid_Lcontact_frame,affected_side);
+% compare_joint_angle(export_filename, indiv_figdir,Rhip_extension,Lhip_extension, '股関節伸展角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,affected_side);
+% compare_joint_angle(export_filename, indiv_figdir,Rhip_abduction,Lhip_abduction, '股関節外転角度 [°]', [-12,12],'Abduction','Adduction', valid_Rcontact_frame,valid_Lcontact_frame,affected_side);
+% compare_joint_angle(export_filename, indiv_figdir,Rhip_rotation,Lhip_rotation, '股関節内旋角度 [°] ', [-15,15],'Internal Rotation','External Rotation', valid_Rcontact_frame,valid_Lcontact_frame,affected_side);
 % 
-compare_joint_angle_withsigma(export_filename, indiv_figdir,Rknee_angle,Lknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side,nondisabled_data);
-compare_joint_angle_withsigma(export_filename, indiv_figdir,Rankle_angle,Lankle_angle, '足関節角度 [°]', [-45,30],'Dorsiflexion','Plantarflexion', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side,nondisabled_data);
-compare_joint_angle_withsigma(export_filename, indiv_figdir,Rhip_extension,Lhip_extension, '股関節伸展角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side,nondisabled_data);
-compare_joint_angle_withsigma(export_filename, indiv_figdir,Rhip_abduction,Lhip_abduction, '股関節外転角度 [°]', [-12,12],'Abduction','Adduction', valid_Rcontact_frame,valid_Lcontact_frame,paralyzed_side,nondisabled_data);
+compare_joint_angle_withsigma(export_filename, indiv_figdir,Rknee_angle,Lknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,affected_side,nondisabled_data);
+compare_joint_angle_withsigma(export_filename, indiv_figdir,Rankle_angle,Lankle_angle, '足関節角度 [°]', [-45,30],'Dorsiflexion','Plantarflexion', valid_Rcontact_frame,valid_Lcontact_frame,affected_side,nondisabled_data);
+compare_joint_angle_withsigma(export_filename, indiv_figdir,Rhip_extension,Lhip_extension, '股関節伸展角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,affected_side,nondisabled_data);
+compare_joint_angle_withsigma(export_filename, indiv_figdir,Rhip_abduction,Lhip_abduction, '股関節外転角度 [°]', [-12,12],'Abduction','Adduction', valid_Rcontact_frame,valid_Lcontact_frame,affected_side,nondisabled_data);
 % 
-% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, CoM_z_5m,'両方','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'重心位置',paralyzed_side);
-% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, CoM_z_5m,'両方','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'重心位置',paralyzed_side);
-% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Rthigh_z_5,'右','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'右大腿',paralyzed_side);
-% compare_joint_angle_addsomething(exSport_filename, indiv_figdir, Rhip_extension, Lhip_extension, Rthigh_z_5,'右','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'右大腿',paralyzed_side);
-% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Lthigh_z_5,'左','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'左大腿',paralyzed_side);
-% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Lthigh_z_5,'左','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'左大腿',paralyzed_side);
+% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, CoM_z_5m,'両方','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'重心位置',affected_side);
+% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, CoM_z_5m,'両方','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'重心位置',affected_side);
+% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Rthigh_z_5,'右','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'右大腿',affected_side);
+% compare_joint_angle_addsomething(exSport_filename, indiv_figdir, Rhip_extension, Lhip_extension, Rthigh_z_5,'右','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'右大腿',affected_side);
+% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Lthigh_z_5,'左','膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'左大腿',affected_side);
+% compare_joint_angle_addsomething(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Lthigh_z_5,'左','股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,valid_Lcontact_frame,'左大腿',affected_side);
 % 
-compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, CoM_z_5m,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'重心位置',paralyzed_side);
-compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, CoM_z_5m,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'重心位置',paralyzed_side);
-% compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Rthigh_z_5,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'右大腿',paralyzed_side);
-% compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Rthigh_z_5,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'右大腿',paralyzed_side);
-% compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Lthigh_z_5,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'左大腿',paralyzed_side);
-% compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Lthigh_z_5,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'左大腿',paralyzed_side);
+compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, CoM_z_5m,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'重心位置',affected_side);
+compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, CoM_z_5m,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'重心位置',affected_side);
+% compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Rthigh_z_5,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'右大腿',affected_side);
+% compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Rthigh_z_5,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'右大腿',affected_side);
+% compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rknee_angle, Lknee_angle, Lthigh_z_5,'膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame,'左大腿',affected_side);
+% compare_joint_angle_addsomething_Rfootcontact(export_filename, indiv_figdir, Rhip_extension, Lhip_extension, Lthigh_z_5,'股関節角度 [°]', [-15,45],'Flextion','Extension', valid_Rcontact_frame,'左大腿',affected_side);
 
 next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'右', Rknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Rcontact_frame, next_column);
 next_column = plot_joint_angle(Modified_input_file, export_filename, indiv_figdir,'左', Lknee_angle, '膝関節角度 [°]', [-10,70],'Flextion','Extension', valid_Lcontact_frame, next_column);

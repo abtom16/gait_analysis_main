@@ -1,4 +1,4 @@
-function[] = modifing_data(input_file_name)
+function[] = modifing_data(input_file_name, affected_side)
 clc
 %input_file_name = 'D:\1修士\６.Xsens_analysis\main_expariment\20241211\sub1\sub1_normal1';
 % 5m歩行テストデータ分析用
@@ -377,6 +377,7 @@ Right_Hip_y = data_SegOrieEuler(:,48);  %%　股関節のy座標はupperlegのy�
 Left_Hip_y = data_SegOrieEuler(:,60);
 % Hip_Fle = Right_Hip_Fle - Left_Hip_Fle;
 Hip_y = Right_Hip_y - Left_Hip_y;
+
 %% --Findpeaks - foot landing location-- %%  
 %findpeakでは、指定した高さ以下のピークのみを検出することができないためｚの値をマイナスにして-0.01以上の値を導出
 [~,Right_Footprint_locs] = findpeaks(-Right_Foot_z,'minpeakdistanc',20,'MinPeakHeight',-0.01);
@@ -474,14 +475,16 @@ end
 right_single_support = valid_R_foot_contact & ~valid_L_foot_contact;
 R_ss_start = find(diff([0, right_single_support]) == 1);
 R_ss_end = find(diff([right_single_support, 0]) == -1);
-R_ss_time = (R_ss_end - R_ss_start) * dt;
+R_ss_time = ((R_ss_end - R_ss_start) * dt)';  %最後に表にするとき，他の歩容特性（歩幅など）を列ベクトルで管理しているため，転置して合わせている
 mean_R_ss_time = mean(R_ss_time);
+std_R_ss_time = std(R_ss_time);
 
 left_single_support = valid_L_foot_contact & ~valid_R_foot_contact;
 L_ss_start = find(diff([0, left_single_support]) == 1);
 L_ss_end = find(diff([left_single_support, 0]) == -1);
-L_ss_time = (L_ss_end - L_ss_start) * dt;
+L_ss_time = ((L_ss_end - L_ss_start) * dt)';
 mean_L_ss_time = mean(L_ss_time);
+std_L_ss_time = std(L_ss_time);
 
 valid_Rcontact_frame = valid_Rcontact_frame + frame_5m_start;
 valid_Rcontact_end_frame = valid_Rcontact_end_frame + frame_5m_start;
@@ -513,13 +516,13 @@ elseif  Correct_Right_Foot_x(valid_Rcontact_frame(1)) < Correct_Left_Foot_x(vali
     end
 end
 
-Right_StepLength_mean = mean(length_Right_Footprint);
-Left_StepLength_mean = mean(length_Left_Footprint);
-Right_StepLength_std = std(length_Right_Footprint);
-Left_StepLength_std = std(length_Left_Footprint);
+mean_right_steplen = mean(length_Right_Footprint);
+mean_left_steplen = mean(length_Left_Footprint);
+std_right_steplen = std(length_Right_Footprint);
+std_left_steplen = std(length_Left_Footprint);
 
 % 重複歩幅
-double_support_length_Right_Footprint = [];
+right_stride = [];
 % valid_Rcontact_frame = valid_Rcontact_frame + frame_5m_start;
 % valid_Rcontact_end_frame = valid_Rcontact_end_frame + frame_5m_start;
 % valid_Lcontact_frame = valid_Lcontact_frame + frame_5m_start;
@@ -527,20 +530,20 @@ double_support_length_Right_Footprint = [];
 
 for i=1:length(valid_Rcontact_frame)-1
 double_support_Rstep_length = sqrt( (Correct_Right_Foot_x(valid_Rcontact_frame(i+1)) - Correct_Right_Foot_x(valid_Rcontact_frame(i)))^2 + (Correct_Right_Foot_y(valid_Rcontact_frame(i+1)) - Correct_Right_Foot_y(valid_Rcontact_frame(i)))^2 );
-double_support_length_Right_Footprint = [double_support_length_Right_Footprint; double_support_Rstep_length];
+right_stride = [right_stride; double_support_Rstep_length];
 end
-double_support_length_Left_Footprint = [];
+left_stride = [];
 for i=1:length(valid_Lcontact_frame)-1
 double_support_Lstep_length = sqrt( (Correct_Left_Foot_x(valid_Lcontact_frame(i+1)) - Correct_Left_Foot_x(valid_Lcontact_frame(i)))^2 + (Correct_Left_Foot_y(valid_Lcontact_frame(i+1)) - Correct_Left_Foot_y(valid_Lcontact_frame(i)))^2 );
-double_support_length_Left_Footprint = [double_support_length_Left_Footprint; double_support_Lstep_length];
+left_stride = [left_stride; double_support_Lstep_length];
 end
 
-double_support_Right_StepLength_mean = mean(double_support_length_Right_Footprint);
-double_support_Left_StepLength_mean = mean(double_support_length_Left_Footprint);
-double_support_Right_StepLength_std = std(double_support_length_Right_Footprint);
-double_support_Left_StepLength_std = std(double_support_length_Left_Footprint);
-StepLength_mean = (Right_StepLength_mean + Left_StepLength_mean) / 2;
-SI_step = 2 * abs(Right_StepLength_mean - Left_StepLength_mean) / (Right_StepLength_mean + Left_StepLength_mean);
+mean_right_stride = mean(right_stride);
+mean_left_stride = mean(left_stride);
+std_right_stride = std(right_stride);
+std_left_stride = std(left_stride);
+StepLength_mean = (mean_right_steplen + mean_left_steplen) / 2;
+SI_step = 2 * abs(mean_right_steplen - mean_left_steplen) / (mean_right_steplen + mean_left_steplen) * 100;
 
 for i=1:length(valid_Lcontact_frame)-1
     Lstep_framelen(i) = valid_Lcontact_frame(i+1) - valid_Lcontact_frame(i);
@@ -584,7 +587,7 @@ end
 Rswing_time = Rstep_cycle_time - Rstance_time;
 Rswing_time_mean = mean(Rswing_time);
 Rswing_time_std = std(Rswing_time);
-SI_time = 2*abs(Lstance_time_mean-Rstance_time_mean) / (Lstance_time_mean+Rstance_time_mean);
+SI_time = 2*abs(Lstance_time_mean-Rstance_time_mean) / (Lstance_time_mean+Rstance_time_mean) *100;
 
 %%歩数 歩行率の計算
 
@@ -638,78 +641,165 @@ StepWidth_mean	= (hokakuL_mean + hokakuR_mean)/2;
 
 %% --1ページ目に
 %% ********** 以上,データ計算 **********
-%% 所定の区間のエクセル出力，各データごとに列をつくる
-% 5m区間と11m区間の範囲のシートをそれぞれ作る．
-% 重心 Correct_CoM_x, Correct_CoM_y, CoM_z
-% 股関節 Right_Hip_y, Left_Hip_y
-% 膝関節 Right_Knee_angle,Left_Knee_angle
-% 足関節 Right_Ankle_angle,Left_Ankle_angle
 
-A_t = "CoM_x";
-B_t = "CoM_y";
-C_t = "CoM_z";
-D_t = "Right Upper Leg y";
-E_t = "Left Upper Leg y";
-F_t = "Hip_joint_angle";
-G_t = "Right_Knee_angle";
-H_t = "Left_Knee_angle";
-I_t = "Right_Ankle_angle";
-J_t = "Left_Ankle_angle";
-K_t = "Right_Foot_Contact";
-L_t = "Left_Foot_Contact";
-M_t = "Right_Foot_pos_x";
-N_t = "Left_Foot_pos_x";
-O_t = "Right_Foot_pos_y";
-P_t = "Left_Foot_pos_y";
-Q_t = "Correct_L5_ax";
-R_t = "Correct_L5_ay";
-S_t = "Correct_L5_ay_0.5";
-T_t = "Correct_L5_ay_1";
-U_t = "Correct_L5_ay_2";
-V_t = "Correct_L5_ay_5";
+%% ---------- エクセル出力のため，列名の定義とデータの格納 ---------
+%% 所定の区間のエクセル出力，各データごとに列をつくる
+%% エクセルに出力 シートごとに出力を変える　
+[path, name, ~] = fileparts(input_file_name_xlsx);
+filename = fullfile(path, ['Modified_', name, '.xlsx']);
+if isfile(filename)
+    delete(filename);
+    disp(['ファイル "' filename '" は既に存在するので上書きします。']);
+end
+
+% 麻痺側にあわせたデータラベルの作成
+if strcmp(affected_side, 'Right')
+    R_tag = 'R (Aff.)';
+    L_tag = 'L';
+elseif strcmp(affected_side, 'Left')
+    R_tag = 'R';
+    L_tag = 'L (Aff.)';
+else
+    R_tag = 'R';
+    L_tag = 'L';
+end
+
+
+%% -- 以降データ出力 --
+
+%% ========= 歩容特性 左右の平均値など ============
+A1 = "Walk Speed[m/s]";
+B1 = "Mean(L+R) Step Len[m]";
+C1 = "Mean(L+R) Step Width[m]";
+D1 = "Number of Steps";
+E1 = "Walking Rate";
+F1 = "Step Length / Walking Rate";
+G1 = "SI step[%]";
+H1 = "SI Stance time[%]";
+I1 = "Mean(L+R) Step Cycle[s]";
+J1 = "Mean Lateral Flex(Lumber)[deg]";
+K1 = "Mean Lateral Flex(Neck to Pelvis)[deg]";
+table1_variable = [A1, B1, C1, D1, E1, F1, G1, H1, I1, J1, K1];
+output_table1 = [Walk_speed , StepLength_mean, StepWidth_mean, Num_of_Step, Walking_Rate, walkrate_steplen, SI_step, SI_time, step_cycle_mean, ...
+    mean_lateralFlex, mean_lateralFlex_2neck];
+
+writecell(num2cell(table1_variable), filename, 'Sheet', '歩容特性','Range','A1');
+writematrix(output_table1, filename, 'Sheet', '歩容特性','Range','A2');
+%% -- 歩容特性 歩幅などを計測区間の各ステップで算出 --
+% まず表のサイズを決定する，ステップ数が一番多いものから行数を決定し，データが足りない部分はNaNでパディングしている
+num_steps = max([length(right_stride),length(left_stride),...
+    length(length_Right_Footprint),length(length_Left_Footprint),length(Rstep_cycle_time), length(Lstep_cycle_time), length(R_ss_time),length(L_ss_time),length(hokaku_right),length(hokaku_left)]);
+pad_with_nan = @(x) [x; nan(num_steps - length(x), 1)];
+
+length_Right_Footprint = pad_with_nan(length_Right_Footprint);
+length_Left_Footprint = pad_with_nan(length_Left_Footprint);
+Lstance_time = pad_with_nan(Lstance_time);
+Lswing_time = pad_with_nan(Lswing_time);
+Rstance_time = pad_with_nan(Rstance_time);
+Rswing_time = pad_with_nan(Rswing_time);
+hokaku_right = pad_with_nan(hokaku_right);
+hokaku_left = pad_with_nan(hokaku_left);
+R_ss_time = pad_with_nan(R_ss_time);
+L_ss_time = pad_with_nan(L_ss_time);
+Lstep_cycle_time = pad_with_nan(Lstep_cycle_time);
+Rstep_cycle_time = pad_with_nan(Rstep_cycle_time);
+right_stride = pad_with_nan(right_stride);
+left_stride = pad_with_nan(left_stride);
+
+% 各データの統合
+
+step_data_values = [length_Right_Footprint, length_Left_Footprint, Rstance_time, Lstance_time, Rswing_time, Lswing_time,...
+    hokaku_right, hokaku_left, R_ss_time, L_ss_time, Rstep_cycle_time, Lstep_cycle_time, right_stride, left_stride];
+mean_values = [mean_right_steplen, mean_left_steplen, Rstance_time_mean, Lstance_time_mean, Rswing_time_mean, Lswing_time_mean,...
+    hokakuR_mean, hokakuL_mean, mean_R_ss_time, mean_L_ss_time, Rstep_cycle_mean, Lstep_cycle_mean, mean_right_stride, mean_left_stride];
+std_values = [std_right_steplen, std_left_steplen, Rstance_time_std, Lstance_time_std, Rswing_time_std, Lswing_time_std, ...
+    hokakuR_std, hokakuL_std, std_R_ss_time, std_L_ss_time, Rstep_std_time, Lstep_std_time, std_right_stride, std_left_stride];
+
+step_data = [step_data_values; nan(1,size(mean_values,2)); mean_values; std_values]; % データがわかりやすいように，nanで一行開けている
+
+% 列・行ラベルの作成
+columns_label = {'Step No.', ...
+    [R_tag,'Step Length[m]'],[L_tag,'Step Length[m]'],...
+    [R_tag,'Stance Time[s]'],[L_tag,'Stance Time[s]'],...
+    [R_tag,'Swing Time[s]'],[L_tag,'Swing Time[s]'],...
+    [R_tag,'Step Width[m]'],[L_tag,'Step Width[m]'],...
+    [R_tag,'Single Support[s]'],[L_tag,'Single Support[s]'],...
+    [R_tag,'Cycle[s]'],[L_tag,'Cycle[s]'],...
+    [R_tag,'Stride[m]'], [L_tag,'Stride[m]']
+};
+rows_label = [num2cell((1:num_steps)');{''};{'Mean'};{'Std'}];
+
+writecell(columns_label, filename, 'Sheet','歩容特性','Range','A10');
+writecell(rows_label, filename, 'Sheet','歩容特性','Range','A11');
+writematrix(step_data, filename, 'Sheet','歩容特性','Range','B11');
+
+%% ================== 時系列データの出力 ===============
+% --- 各種データの定義 ---
+A_t = "CoM x[m]";
+B_t = "CoM y[m]";
+C_t = "CoM z[m]";
+D_t = [R_tag,' Upper Leg y[m]'];
+E_t = [L_tag,' Upper Leg y[m]'];
+F_t = 'R-L Upper Leg y[m]';
+G_t = [R_tag,' Knee [deg]'];
+H_t = [L_tag,' Knee [deg]'];
+I_t = [R_tag,' Ankle [deg]'];
+J_t = [L_tag,' Ankle [deg]'];
+K_t = [R_tag,' Foot_Contact'];
+L_t = [L_tag,' Foot_Contact'];
+M_t = [R_tag,' Foot x'];
+N_t = [L_tag,' Foot x'];
+O_t = [R_tag,' Foot y'];
+P_t = [L_tag,' Foot y'];
+Q_t = "L5 ax";
+R_t = "L5 ay";
+S_t = "L5 ay filter0.5";
+T_t = "L5 ay filter1";
+U_t = "L5 ay filter2";
+V_t = "L5 ay filter5";
 W_t = "CoM_ay";
-X_t = "CoM_ay_0.5";
-Y_t = "CoM_ay_1";
-Z_t = "CoM_ay_2";
-AA_t = "CoM_ay_5";
-AB_t = "L5_y";
-AC_t = "Right_Hip_abduction";
-AD_t = "Left_Hip_abduction";
-AE_t = "ZMP_x";
-AF_t = "ZMP_y";
-AG_t = "Right Toe Clearance";
-AH_t = "Left Toe Clearance";
+X_t = "CoM_ay filter0.5";
+Y_t = "CoM_ay filter1";
+Z_t = "CoM_ay filter2";
+AA_t = "CoM_ay filter5";
+AB_t = "L5 y [m]";
+AC_t = [R_tag,' Hip abduction[deg]'];
+AD_t = [L_tag,' Hip abduction[deg]'];
+AE_t = "ZMP x[m]";
+AF_t = "ZMP y[m]";
+AG_t = "Right Toe Clearance[m]";
+AH_t = "Left Toe Clearance[m]";
 AI_t = "CoM_x Acceralation";
-AJ_t = "Right Upper Leg x";
-AK_t = "Right Upper Leg z";
-AL_t = "Right Lower Leg x";
-AM_t = "Right Lower Leg z";
-AN_t = "Right Foot x";
-AO_t = "Left Upper Leg x";
-AP_t = "Left Upper Leg z";
-AQ_t = "Left Lower Leg x";
-AR_t = "Left Lower Leg z";
-AS_t = "Left Foot x";
-AT_t = "Right Toe x";
-AU_t = "Left Toe x";
-AV_t = "Right Hip Rotation";
-AW_t = "Right Hip Extension";
-AX_t = "Left Hip Rotation";
-AY_t = "Left Hip Extension";
+AJ_t = [R_tag,' Hip x[m]'];
+AK_t = [R_tag,' Hip z[m]'];
+AL_t = [R_tag,' Knee x[m]'];
+AM_t = [R_tag,' Knee z[m]'];
+AN_t = [R_tag,' Foot x[m]'];
+AO_t = [L_tag,' Hip x[m]'];
+AP_t = [L_tag,' Hip z[m]'];
+AQ_t = [L_tag,' Knee x[m]'];
+AR_t = [L_tag,' Knee z[m]'];
+AS_t = [L_tag,' Foot x[m]'];
+AT_t = [R_tag,' Toe x[m]'];
+AU_t = [L_tag,' Toe x[m]'];
+AV_t = [R_tag,' Hip Rotation[deg]'];
+AW_t = [R_tag,' Hip Extension[deg]'];
+AX_t = [L_tag,' Hip Rotation[deg]'];
+AY_t = [L_tag,' Hip Extension[deg]'];
 AZ_t = "Pelvis Rotation H-plane(R:+ L:-)";
 BA_t = "Lumber Lateral Flexion";
 BB_t = "Pelvis to Neck Lateral Flexion";
 BC_t = "Pelvis to Neck Flexion";
-BD_t = "Right Toe y";
-BE_t = "Left Toe y";
+BD_t = [R_tag,' Toe y[m]'];
+BE_t = [L_tag,' Toe y[m]'];
 BF_t = "Neck x";
 BG_t = "Neck y";
 BH_t = "CoM az";
 BI_t = "CoM vz";    % velocity of z-axis (veritical)
 BJ_t = "L5_x";
 BK_t = "L5_z";
-BL_t = "Right Foot z"; 
-BM_t = "Left Foot z";
+BL_t = [R_tag,' Foot z[m]']; 
+BM_t = [L_tag,' Foot z[m]'];
 
 A_5 = Correct_CoM_x(frame_5m_start:frame_5m_end);
 B_5 = Correct_CoM_y(frame_5m_start:frame_5m_end);
@@ -843,34 +933,6 @@ BK_11 = L5_z(frame_11m_start:frame_11m_end);
 BL_11 = Right_Foot_z(frame_11m_start:frame_11m_end);
 BM_11 = Left_Foot_z(frame_11m_start:frame_11m_end);
 
-A1 = "Walk Speed";
-B1 = "Step Length";
-C1 = "Step Length Right";
-D1 = "Step Length Left";
-E1 = "Step Width";
-F1 = "Number of Steps";
-G1 = "Walking Rate";
-H1 = "Step Length / Walking Rate";
-I1 = "SI step";
-J1 = "Right Stance time";
-K1 = "Left Stance time";
-L1 = "SI time";
-M1 = "Right Step Cycle";
-N1 = "Left Step Cycle";
-O1 = "Step Cycle";
-P1 = "STD Right step cycle";
-Q1 = "STD Left step cycle";
-R1 = "Lumber Lateral Flexion mean";
-S1 = "neck to pelvis Lateral Flexion mean";
-T1 = "Right Single Support time";
-U1 = "Left Single Support time";
-
-% エクセルに出力するテーブル
-table1_variable = [A1, B1, C1, D1, E1, F1, G1, H1, I1, J1, K1, L1, M1, N1, O1, P1, Q1, R1, S1, T1, U1];
-output_table1 = [Walk_speed , StepLength_mean, Right_StepLength_mean, Left_StepLength_mean, ...
-    StepWidth_mean, Num_of_Step, Walking_Rate, walkrate_steplen, SI_step, Rstance_time_mean, ...
-    Lstance_time_mean, SI_time, Rstep_cycle_mean, Lstep_cycle_mean, step_cycle_mean, Rstep_std_time, ...
-    Lstep_std_time,mean_lateralFlex,mean_lateralFlex_2neck,mean_R_ss_time,mean_L_ss_time];
 output_title_table = [A_t, B_t, C_t, D_t, E_t, F_t, G_t, H_t, I_t, J_t, K_t,L_t,M_t,N_t,O_t,P_t,Q_t,R_t,S_t,T_t,U_t,V_t,W_t,X_t,Y_t,Z_t,...
     AA_t,AB_t,AC_t,AD_t,AE_t,AF_t,AG_t,AH_t,AI_t,AJ_t,AK_t,AL_t,AM_t,AN_t,AO_t,AP_t,AQ_t,AR_t,AS_t,AT_t,AU_t,AV_t,AW_t,AX_t,AY_t,AZ_t,...
     BA_t,BB_t,BC_t,BD_t,BE_t,BF_t,BG_t,BH_t,BI_t,BJ_t,BK_t,BL_t,BM_t];
@@ -880,54 +942,11 @@ output_matrix_5m = [A_5,B_5,C_5,D_5,E_5,F_5,G_5,H_5,I_5,J_5,K_5,L_5,M_5,N_5,O_5,
 output_matrix_11m = [A_11,B_11,C_11,D_11,E_11,F_11,G_11,H_11,I_11,J_11,K_11,L_11,M_11,N_11,O_11,P_11,Q_11,R_11,S_11,T_11,U_11,V_11,W_11',X_11',Y_11',Z_11',...
     AA_11',AB_11,AC_11,AD_11,AE_11,AF_11,AG_11,AH_11,AI_11',AJ_11,AK_11,AL_11,AM_11,AN_11,AO_11,AP_11,AQ_11,AR_11,AS_11,AT_11,AU_11,AV_11,AW_11,AX_11,AY_11,AZ_11,...
     BA_11,BB_11,BC_11,BD_11,BE_11,BF_11,BG_11,BH_11,BI_11,BJ_11,BK_11,BL_11,BM_11];
-%% エクセルに出力 シートごとに出力を変える　
-[path, name, ~] = fileparts(input_file_name_xlsx);
-filename = fullfile(path, ['Modified_', name, '.xlsx']);
 
-num_steps = max([length(double_support_length_Right_Footprint),length(double_support_length_Left_Footprint),...
-    length(length_Right_Footprint),length(length_Left_Footprint),length(Rstep_cycle_time), length(Lstep_cycle_time), length(hokaku_right),length(hokaku_left)]);
+writematrix(output_title_table, filename, 'Sheet', '時系列データ 5m', 'Range','A1');
+writematrix(output_matrix_5m, filename, 'Sheet', '時系列データ 5m', 'Range', 'A2');
+writematrix(output_title_table, filename, 'Sheet', '時系列データ 11m', 'Range','A1');
+writematrix(output_matrix_11m, filename, 'Sheet', '時系列データ 11m', 'Range', 'A2');
 
-% NaNでデータを埋める関数
-pad_with_nan = @(x) [x; nan(num_steps - length(x), 1)];
-double_support_length_Right_Footprint = pad_with_nan(double_support_length_Right_Footprint);
-double_support_length_Left_Footprint = pad_with_nan(double_support_length_Left_Footprint);
-length_Right_Footprint = pad_with_nan(length_Right_Footprint);
-length_Left_Footprint = pad_with_nan(length_Left_Footprint);
-Lstep_cycle_time = pad_with_nan(Lstep_cycle_time);
-Rstep_cycle_time = pad_with_nan(Rstep_cycle_time);
-Lstance_time = pad_with_nan(Lstance_time);
-Lswing_time = pad_with_nan(Lswing_time);
-Rstance_time = pad_with_nan(Rstance_time);
-Rswing_time = pad_with_nan(Rswing_time);
-hokaku_right = pad_with_nan(hokaku_right);
-hokaku_left = pad_with_nan(hokaku_left);
-
-step_numbers = (1:num_steps)';
-
-step_data = [step_numbers, double_support_length_Right_Footprint, double_support_length_Left_Footprint, length_Right_Footprint, length_Left_Footprint,...
-    Rstep_cycle_time, Lstep_cycle_time, Rstance_time, Lstance_time, Rswing_time, Lswing_time, hokaku_right, hokaku_left];
-mean_values = [double_support_Right_StepLength_mean, double_support_Left_StepLength_mean, Right_StepLength_mean, Left_StepLength_mean,...
-    Rstep_cycle_mean, Lstep_cycle_mean, Rstance_time_mean, Lstance_time_mean, Rswing_time_mean, Lswing_time_mean, hokakuR_mean, hokakuL_mean];
-mean_row = [{'Mean'}, num2cell(mean_values)];
-
-std_values = [double_support_Right_StepLength_std, double_support_Left_StepLength_std, Right_StepLength_std, Left_StepLength_std,Rstep_std_time,Lstep_std_time,...
-    Rstance_time_std, Lstance_time_std, Rswing_time_std, Lswing_time_std, hokakuR_std, hokakuL_std];
-std_row = [{'Std'}, num2cell(std_values)];
-
-columns_name = {'Step No.', 'R double step length', 'L double step length','R step length','L step length', 'R walking cycle', 'L walking cycle',...
-    'R stance time', 'L stance time', 'R swing time', 'L swing time', 'R step width', 'L step width'};
-step_data_all = [num2cell(step_data); mean_row; std_row];
-
-step_table = cell2table(step_data_all, 'VariableNames',columns_name);
-
-if isfile(filename)
-    delete(filename);
-    disp(['ファイル "' filename '" は既に存在するので上書きします。']);
-end
-
-writematrix([table1_variable; output_table1], filename, 'Sheet', '歩容特性','Range','A1');
-writetable(step_table, filename, 'Sheet', '歩容特性', 'Range', 'A10');
-writematrix([output_title_table; output_matrix_5m], filename, 'Sheet', '時系列データ 5m');
-writematrix([output_title_table; output_matrix_11m], filename, 'Sheet', '時系列データ 11m');
 end
 
